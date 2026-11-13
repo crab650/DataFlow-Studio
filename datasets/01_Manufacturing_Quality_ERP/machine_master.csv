@@ -1,0 +1,9 @@
+﻿MachineID,MachineName,PlantArea,MachineModel,InstallYear,MaxCapacity
+MC-101,三廠-A1全自動光學產線,三廠 (全自動新世代區),NeoTech-2024X,2024,950
+MC-102,三廠-A2智慧精密產線,三廠 (全自動新世代區),NeoTech-2023S,2023,900
+MC-103,二廠-B1高速積層線,二廠 (主力標準產區),ProLine-500,2021,820
+MC-104,二廠-B2高速積層線,二廠 (主力標準產區),ProLine-500,2021,820
+MC-105,二廠-B3雙軸成型線,二廠 (主力標準產區),ProLine-450,2020,780
+MC-106,一廠-C1重載傳統機,一廠 (老舊重載產區),Legacy-MK2,2018,750
+MC-107,一廠-C2重載傳統機,一廠 (老舊重載產區),Legacy-MK2,2017,720
+MC-108,一廠-C3初代成型機,一廠 (老舊重載產區),Legacy-MK1,2016,680

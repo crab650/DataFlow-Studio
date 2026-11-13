@@ -1,0 +1,7 @@
+﻿SupplierID,SupplierName,MaterialCategory,Region,ContractTier,LeadTimeDays
+SUP-01,台積精密材料,高純度合金基材,台灣新竹,Tier-1 (核心特優),3
+SUP-02,日系東麗高規,奈米複合塗層,日本大阪,Tier-1 (核心特優),5
+SUP-03,德州特種化工,耐熱工業樹脂,美國德州,Tier-2 (標準合格),7
+SUP-04,南亞高分子廠,工業級塑化粒子,越南平陽,Tier-2 (標準合格),4
+SUP-05,永興標準五金,一般沖壓線材,台灣台中,Tier-3 (一般備援),6
+SUP-06,宏達低價原料,回收再生塑料,東南亞外包,Tier-3 (一般備援),9

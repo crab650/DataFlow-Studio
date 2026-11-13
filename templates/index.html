@@ -1,0 +1,2882 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DataFlow Studio | SQL + Python 專案制數據分析工作台</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- CodeMirror 5 Syntax Highlighting IDE (SQL + Python + Dracula Theme) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+
+  <style>
+    body {
+      font-family: "Microsoft JhengHei", "PingFang TC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+    .CodeMirror {
+      height: 100% !important;
+      font-family: "Consolas", "JetBrains Mono", "Monaco", "Courier New", monospace;
+      font-size: 13.5px;
+      line-height: 1.55;
+    }
+    .CodeMirror-activeline-background {
+      background: rgba(255, 255, 255, 0.07) !important;
+    }
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+  <!-- Top Header with Project (Dataset) Switcher -->
+  <header class="bg-slate-900 text-white px-4 py-2 flex items-center justify-between shadow-md shrink-0">
+    <div class="flex items-center space-x-3">
+      <div class="bg-gradient-to-r from-indigo-500 to-emerald-500 text-white font-extrabold px-2.5 py-1 rounded text-xs tracking-wider">
+        DataFlow Studio
+      </div>
+      <button onclick="toggleSidebarFlyout()" class="bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white px-2 py-1 rounded border border-slate-700 text-xs font-bold flex items-center space-x-1 transition shadow-sm" title="點擊彈出/收合側邊欄 (用完自動彈回)">
+        <span>📂</span>
+        <span>側邊欄</span>
+      </button>
+      <h1 class="text-sm font-bold tracking-wide hidden xl:block text-slate-200">SQL + Python 數據分析工作台</h1>
+
+      <!-- Top-level Folder -> Table -> Target Switcher -->
+      <div class="flex items-center bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 space-x-2">
+        <span class="text-xs text-amber-300 font-bold">📁 專案資料夾：</span>
+        <select id="headerFolderSelector" onchange="onFolderSwitch(this.value)" class="bg-slate-900 text-amber-200 text-xs font-bold px-2 py-1 rounded border border-slate-600 focus:outline-none focus:border-amber-400"></select>
+        <button onclick="scanDatasetsFolders()" class="bg-slate-700 hover:bg-amber-600 text-slate-200 hover:text-white text-[11px] font-semibold px-1.5 py-0.5 rounded transition" title="當您在 datasets/ 資料夾下放入新資料夾與 CSV 時，點此一鍵掃描載入">
+          🔄 掃描
+        </button>
+
+        <span class="text-slate-600">|</span>
+
+        <span class="text-xs text-indigo-300 font-bold">📄 資料表：</span>
+        <select id="headerTableSelector" onchange="onProjectSwitch(this.value)" class="bg-slate-900 text-white text-xs font-bold px-2 py-1 rounded border border-slate-600 focus:outline-none focus:border-indigo-400"></select>
+
+        <span class="text-slate-600">|</span>
+
+        <span class="text-xs text-rose-300 font-bold">🎯 主角(Y)：</span>
+        <select id="targetColSelector" onchange="onTargetColChange()" class="bg-slate-900 text-rose-200 text-xs font-bold px-2 py-1 rounded border border-slate-600 focus:outline-none focus:border-rose-400 max-w-[145px]"></select>
+
+        <button onclick="regenerateProjectTemplates()" class="bg-slate-700 hover:bg-indigo-600 text-slate-200 hover:text-white text-[11px] font-semibold px-2 py-0.5 rounded transition" title="根據目前選擇的主角欄位(Y)，重新為此數據生成一套專屬 SQL + Python 程式碼">
+          🪄 依主角重產程式
+        </button>
+
+        <button id="deleteProjectBtn" onclick="deleteCurrentProject()" class="hidden text-rose-400 hover:bg-rose-900/50 text-[11px] px-1.5 py-0.5 rounded" title="刪除此專案資料表">
+          🗑️
+        </button>
+      </div>
+    </div>
+
+    <div class="flex items-center space-x-2">
+      <button onclick="openUploadModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow flex items-center space-x-1 transition" title="支援一次選取單個或多個 CSV / Excel 檔案匯入">
+        <span>➕ 匯入數據 (單檔/多檔)</span>
+      </button>
+      <button onclick="openJoinModal()" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow flex items-center space-x-1 transition" title="將多張表左右關聯 (JOIN / merge) 或上下疊加 (UNION / concat)">
+        <span>🔗 多表關聯/合併</span>
+      </button>
+      <button onclick="openColDictModal()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow flex items-center space-x-1 transition" title="設定或貼上欄位的中英對照與分析用途">
+        <span>🌐 中英欄位字典</span>
+      </button>
+      <button onclick="openHealthCheckModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow flex items-center space-x-1 transition">
+        <span>🏥 一鍵全表體檢</span>
+      </button>
+      <button onclick="openGuideModal()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow transition">
+        <span>📖 4步心法</span>
+      </button>
+      <button onclick="exportReportMarkdown()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-600 transition">
+        <span>📥 匯出報告</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <div class="flex-1 flex overflow-hidden relative">
+
+    <!-- Mini Dock (極簡常駐迷你邊條，寬度 44px) -->
+    <div id="miniSidebarDock" class="w-11 bg-slate-900 border-r border-slate-800 flex flex-col items-center py-2.5 space-y-3 shrink-0 z-20 select-none">
+      <button onclick="toggleSidebarFlyout()" class="w-8 h-8 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center text-xs shadow transition active:scale-95" title="展開/收合側邊欄 (用完自動彈回)">
+        <span id="dockToggleIcon">📂</span>
+      </button>
+
+      <div class="w-6 border-b border-slate-700"></div>
+
+      <button onclick="openSidebarTabWithFlyout('notes')" class="w-8 h-8 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-indigo-400 flex flex-col items-center justify-center relative transition" title="專屬程式庫">
+        <span class="text-sm">📚</span>
+        <span id="dockNotesBadge" class="absolute -top-1 -right-1 bg-indigo-500 text-white text-[9px] font-bold px-1 rounded-full min-w-[14px] text-center">0</span>
+      </button>
+
+      <button onclick="openSidebarTabWithFlyout('schema')" class="w-8 h-8 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-sky-400 flex flex-col items-center justify-center relative transition" title="欄位字典">
+        <span class="text-sm">🗂️</span>
+        <span id="dockSchemaBadge" class="absolute -top-1 -right-1 bg-sky-500 text-white text-[9px] font-bold px-1 rounded-full min-w-[14px] text-center">0</span>
+      </button>
+
+      <div class="flex-1"></div>
+
+      <button id="dockPinToggleBtn" onclick="toggleSidebarPin()" class="w-8 h-8 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-amber-400 flex items-center justify-center text-xs transition" title="釘住側邊欄（固定展開，不自動縮回）">
+        <span id="dockPinIcon">📌</span>
+      </button>
+    </div>
+
+    <!-- Backdrop for Flyout Mode (點擊背景空白處自動彈回縮起) -->
+    <div id="sidebarBackdrop" onclick="closeSidebarFlyout()" class="fixed inset-0 bg-slate-900/30 backdrop-blur-[1px] z-30 hidden transition-opacity duration-200"></div>
+
+    <!-- Left Sidebar: Project-Specific Saved Notes & Schema Dictionary (支援隨用彈出與釘住模式) -->
+    <aside id="mainAppSidebar" class="absolute left-11 top-0 bottom-0 z-40 w-96 bg-white border-r border-slate-200 flex flex-col shrink-0 overflow-hidden shadow-2xl transition-all duration-300 transform -translate-x-[110%]">
+      <!-- Sidebar Header Bar with Pin / Close controls -->
+      <div class="flex items-center justify-between border-b border-slate-200 bg-slate-100 px-3 py-1.5 shrink-0">
+        <div class="flex items-center space-x-1">
+          <button id="sideTabNotes" onclick="switchSidebarTab('notes')" class="px-2.5 py-1 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-md shadow-sm">
+            📚 程式庫 (<span id="notesCount">0</span>)
+          </button>
+          <button id="sideTabSchema" onclick="switchSidebarTab('schema')" class="px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-md">
+            🗂️ 欄位字典 (<span id="schemaColCount">0</span>)
+          </button>
+        </div>
+        <div class="flex items-center space-x-1">
+          <button id="sidebarPinActionBtn" onclick="toggleSidebarPin()" class="text-[11px] px-2 py-0.5 rounded bg-slate-200 hover:bg-amber-100 text-slate-700 hover:text-amber-800 font-bold flex items-center space-x-0.5 transition" title="釘住側邊欄（固定展開，不自動彈回）">
+            <span id="sidebarPinBtnIcon">📌</span>
+            <span id="sidebarPinBtnText">釘住</span>
+          </button>
+          <button onclick="closeSidebarFlyout()" class="text-slate-400 hover:text-slate-700 text-sm font-bold w-6 h-6 flex items-center justify-center rounded hover:bg-slate-200" title="關閉/收合側邊欄 (ESC)">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab 1: Project-Specific Saved SQL & Python Notes List with Drag-and-Drop Folders -->
+      <div id="sidebarNotesPanel" class="flex-1 flex flex-col overflow-hidden">
+        <div class="p-2 border-b border-slate-100 bg-slate-50 space-y-1.5 shrink-0">
+          <div class="flex items-center justify-between px-0.5">
+            <span class="text-[11px] font-bold text-slate-600 truncate" id="sidebarProjectLabel">📂 專案: defects</span>
+            <div class="flex space-x-1">
+              <button onclick="promptCreateNewFolder()" class="text-[11px] bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded border border-amber-200" title="新建分類資料夾，可將程式拖曳放入">
+                📁 + 分類夾
+              </button>
+              <button onclick="createNewBlankNote()" class="text-[11px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.5 rounded border border-indigo-200" title="新增自訂空白筆記">
+                + 新增筆記
+              </button>
+              <button onclick="regenerateProjectTemplates()" class="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-1 py-0.5 rounded" title="還原/重新產生此專案的預設教學程式">
+                重產
+              </button>
+            </div>
+          </div>
+          <div class="flex items-center space-x-1">
+            <button id="filterAllBtn" onclick="setNotesLangFilter('all')" class="flex-1 text-[11px] font-bold py-0.5 rounded bg-slate-800 text-white">全部</button>
+            <button id="filterSqlBtn" onclick="setNotesLangFilter('sql')" class="flex-1 text-[11px] font-semibold py-0.5 rounded bg-slate-200 text-slate-700 hover:bg-indigo-100">💻 SQL</button>
+            <button id="filterPyBtn" onclick="setNotesLangFilter('python')" class="flex-1 text-[11px] font-semibold py-0.5 rounded bg-slate-200 text-slate-700 hover:bg-emerald-100">🐍 Python</button>
+            <button onclick="toggleAllFoldersCollapse()" class="text-[10px] text-slate-500 hover:text-slate-800 bg-slate-200 hover:bg-slate-300 px-1.5 py-0.5 rounded font-bold" title="全部展開/折疊所有資料夾">↕️ 折疊</button>
+          </div>
+          <div class="text-[10px] text-slate-500 px-0.5 flex items-center justify-between">
+            <span>💡 提示：按住程式卡片可直接 <b>拖曳 (Drag)</b> 移入不同資料夾</span>
+          </div>
+        </div>
+        <div id="notesListContainer" class="flex-1 overflow-y-auto p-2.5 space-y-2">
+          <!-- Populated by JS with Draggable Notes in Categorized Folders -->
+        </div>
+      </div>
+
+      <!-- Tab 2: Table & Column Schema Explorer (Multi-Table Aware) -->
+      <div id="sidebarSchemaPanel" class="hidden flex-1 flex flex-col overflow-hidden">
+        <div class="p-2.5 border-b border-slate-200 bg-slate-50 space-y-2 shrink-0">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold text-slate-700">🗂️ 多表欄位與分析用途字典</span>
+            <button onclick="openColDictModal()" class="text-[11px] bg-sky-600 hover:bg-sky-500 text-white font-bold px-2 py-0.5 rounded shadow-sm transition">
+              ✏️ 編輯中英對照表
+            </button>
+          </div>
+          <!-- Multi-table filter buttons in sidebar -->
+          <div id="schemaTableFilterBar" class="flex flex-wrap gap-1"></div>
+          <p class="text-[11px] text-slate-500 leading-tight">
+            💡 可切換查看「全部資料表」或單一表；點欄位名可直接插入程式碼！
+          </p>
+        </div>
+        <div id="columnsListContainer" class="flex-1 overflow-y-auto p-2.5 space-y-3">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </aside>
+
+    <!-- Right Workspace -->
+    <main class="flex-1 flex flex-col overflow-hidden bg-slate-100">
+
+      <!-- Top Half: Code Editor + Note Annotation Editor -->
+      <div class="h-[45%] min-h-[275px] grid grid-cols-12 gap-3 p-3 shrink-0">
+
+        <!-- Code Editor (7 cols) -->
+        <div class="col-span-7 bg-[#282a36] rounded-xl shadow-md border border-slate-700 flex flex-col overflow-hidden">
+          <div class="px-3 py-1.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-700 shrink-0">
+            <div class="flex items-center space-x-1.5">
+              <button id="modeBtnSql" onclick="setEditorLanguage('sql')" class="text-xs font-bold px-3 py-1 rounded-md bg-indigo-600 text-white shadow transition">
+                💻 SQL 模式
+              </button>
+              <button id="modeBtnPython" onclick="setEditorLanguage('python')" class="text-xs font-bold px-3 py-1 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
+                🐍 Python (df) 模式
+              </button>
+              <span class="text-[11px] text-slate-400 pl-1 hidden xl:inline">(Ctrl+Enter 執行)</span>
+            </div>
+
+            <!-- Quick Snippets for SQL Mode -->
+            <div id="sqlTemplateBtns" class="flex items-center space-x-1">
+              <span class="text-[11px] text-slate-400 mr-0.5">快插：</span>
+              <button onclick="insertCodeTemplate('sql_preview')" class="text-[11px] bg-slate-800 hover:bg-slate-700 border border-slate-600 px-2 py-0.5 rounded text-indigo-200">前20筆</button>
+              <button onclick="insertCodeTemplate('sql_groupby')" class="text-[11px] bg-slate-800 hover:bg-slate-700 border border-slate-600 px-2 py-0.5 rounded text-indigo-200">GROUP BY</button>
+              <button onclick="insertCodeTemplate('sql_casewhen')" class="text-[11px] bg-slate-800 hover:bg-slate-700 border border-slate-600 px-2 py-0.5 rounded text-indigo-200">切區間</button>
+            </div>
+
+            <!-- Quick Snippets for Python Mode -->
+            <div id="pyTemplateBtns" class="hidden items-center space-x-1">
+              <span class="text-[11px] text-slate-400 mr-0.5">快插：</span>
+              <button onclick="insertCodeTemplate('py_check')" class="text-[11px] bg-slate-800 hover:bg-slate-700 border border-emerald-700 px-2 py-0.5 rounded text-emerald-300">空值/重複/統計</button>
+              <button onclick="insertCodeTemplate('py_groupby')" class="text-[11px] bg-slate-800 hover:bg-slate-700 border border-emerald-700 px-2 py-0.5 rounded text-emerald-300">df.groupby</button>
+              <button onclick="insertCodeTemplate('py_boxplot')" class="text-[11px] bg-slate-800 hover:bg-slate-700 border border-emerald-700 px-2 py-0.5 rounded text-emerald-300">Seaborn箱型圖</button>
+            </div>
+          </div>
+
+          <div class="flex-1 overflow-hidden relative">
+            <textarea id="codeEditorTextarea"></textarea>
+          </div>
+
+          <div class="px-3.5 py-1.5 bg-slate-900 border-t border-slate-700 flex items-center justify-between shrink-0">
+            <div id="queryStatusText" class="text-xs text-slate-300 font-medium truncate">
+              準備就緒
+            </div>
+            <div class="flex items-center space-x-2">
+              <button id="runCodeBtn" onclick="runCurrentCode()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow flex items-center space-x-1 transition">
+                <span>▶ 執行 SQL 查詢 (Ctrl+Enter)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Note & Annotation Box (5 cols) -->
+        <div class="col-span-5 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+          <div class="px-3.5 py-2 bg-amber-50 border-b border-amber-200 flex items-center justify-between">
+            <span class="text-xs font-bold text-amber-900">📝 專屬分析筆記與註解</span>
+            <div class="flex items-center space-x-1.5">
+              <button onclick="saveCurrentNote(false)" class="bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold px-2.5 py-1 rounded shadow-sm transition">
+                💾 儲存修改
+              </button>
+              <button onclick="saveCurrentNote(true)" class="bg-white hover:bg-amber-100 text-amber-800 border border-amber-300 text-[11px] font-semibold px-2 py-1 rounded transition">
+                ➕ 另存新筆記
+              </button>
+              <button onclick="deleteCurrentNote()" class="text-rose-600 hover:bg-rose-50 text-[11px] px-1.5 py-1 rounded" title="刪除此筆記">
+                🗑️
+              </button>
+            </div>
+          </div>
+
+          <div class="p-2.5 space-y-2 flex-1 flex flex-col overflow-hidden">
+            <div class="grid grid-cols-12 gap-2">
+              <div class="col-span-6">
+                <input id="noteTitleInput" type="text" placeholder="輸入這條分析筆記的標題..." class="w-full text-xs font-bold border border-slate-300 rounded px-2.5 py-1.5 focus:outline-none focus:border-indigo-500" />
+              </div>
+              <div class="col-span-3">
+                <select id="noteStepTagInput" class="w-full text-xs border border-slate-300 rounded px-2 py-1.5 bg-slate-50 font-semibold text-slate-700" title="選擇對應的分析 SOP 步驟">
+                  <option value="Step 1: 看目標 (Target)">Step 1: 看目標 (Target)</option>
+                  <option value="Step 2: 篩選重點 (Filter)">Step 2: 篩選重點 (Filter)</option>
+                  <option value="Step 3: 找分界線 (Threshold)">Step 3: 找分界線 (Threshold)</option>
+                  <option value="Step 4: 規則驗證 (Validate)">Step 4: 規則驗證 (Validate)</option>
+                  <option value="自訂探索筆記">自訂探索筆記</option>
+                </select>
+              </div>
+              <div class="col-span-3 flex items-center space-x-1">
+                <select id="noteFolderSelect" class="flex-1 text-xs border border-amber-300 rounded px-1.5 py-1.5 bg-amber-50/60 font-bold text-amber-900 focus:outline-none" title="歸屬分類資料夾 (可隨時切換或拖曳)">
+                  <!-- Populated dynamically by JS -->
+                </select>
+                <button type="button" onclick="promptCreateNewFolder()" class="px-1.5 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs rounded font-bold" title="新建自訂分類資料夾">+</button>
+              </div>
+            </div>
+
+            <textarea id="noteContentInput" class="flex-1 w-full p-2.5 text-xs leading-relaxed text-slate-800 bg-amber-50/40 border border-amber-200/80 rounded focus:bg-white focus:outline-none resize-none" placeholder="在這裡寫下您的分析註解..."></textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Half: Visual / Python Console Output + Result Data Table -->
+      <div class="flex-1 px-3 pb-3 flex flex-col overflow-hidden">
+        <div class="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+
+          <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
+            <div class="flex items-center space-x-2">
+              <button id="viewModeSplitBtn" onclick="setBottomViewMode('split')" class="text-xs font-bold px-2.5 py-1 rounded bg-indigo-600 text-white">
+                📊+📋 左右並排
+              </button>
+              <button id="viewModeChartBtn" onclick="setBottomViewMode('chart')" class="text-xs font-semibold px-2.5 py-1 rounded text-slate-600 hover:bg-slate-200">
+                📊 僅看左區 (圖表/Python輸出)
+              </button>
+              <button id="viewModeTableBtn" onclick="setBottomViewMode('table')" class="text-xs font-semibold px-2.5 py-1 rounded text-slate-600 hover:bg-slate-200">
+                📋 僅看右區資料表 (<span id="tableRowCountBadge">0</span> 筆)
+              </button>
+              <div class="flex items-center space-x-1 pl-2 border-l border-slate-300 text-xs">
+                <span class="text-slate-500 font-semibold">🌐 欄位顯示：</span>
+                <select id="colLabelModeSelect" onchange="onColLabelModeChange(this.value)" class="border border-slate-300 rounded px-1.5 py-0.5 bg-white font-bold text-sky-700 text-xs">
+                  <option value="both">中英並排 (推薦)</option>
+                  <option value="zh">僅顯示中文</option>
+                  <option value="en">僅顯示英文原名</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="chartControlsBar" class="flex items-center space-x-1.5 text-xs">
+              <label class="font-bold text-slate-700">圖表：</label>
+              <select id="chartTypeSelect" onchange="renderQueryChart()" class="border border-slate-300 rounded px-2 py-1 bg-white font-semibold text-indigo-700">
+                <option value="bar_line">📈 雙軸圖：折線(Y1) + 長條(Y2) [找分界線神器]</option>
+                <option value="bar">📊 長條圖 (單軸 Bar)</option>
+                <option value="grouped_bar">📊 群組長條圖 (雙指標對比)</option>
+                <option value="line">📉 折線趨勢圖 (Line)</option>
+                <option value="pie">🍩 圓餅圖 / 環圈圖 (看佔比)</option>
+                <option value="scatter">🔵 散佈圖 (X vs Y1)</option>
+              </select>
+
+              <label class="font-bold text-slate-700">X軸：</label>
+              <select id="chartXSelect" onchange="renderQueryChart()" class="border border-slate-300 rounded px-1.5 py-1 bg-white max-w-[115px]"></select>
+
+              <label class="font-bold text-rose-600">Y1(主)：</label>
+              <select id="chartY1Select" onchange="renderQueryChart()" class="border border-rose-300 rounded px-1.5 py-1 bg-rose-50 font-semibold text-rose-800 max-w-[115px]"></select>
+
+              <label class="font-bold text-sky-600">Y2(副)：</label>
+              <select id="chartY2Select" onchange="renderQueryChart()" class="border border-sky-300 rounded px-1.5 py-1 bg-sky-50 font-semibold text-sky-800 max-w-[115px]">
+                <option value="">(無)</option>
+              </select>
+
+              <button onclick="zoomCurrentSqlChart()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-1 rounded font-bold" title="全螢幕放大檢視目前圖表">
+                🔍 放大
+              </button>
+              <button onclick="downloadChartImage()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-1 rounded font-semibold" title="下載目前圖表為 PNG">
+                📷
+              </button>
+            </div>
+          </div>
+
+          <div class="flex-1 grid grid-cols-12 overflow-hidden min-h-0">
+
+            <div id="bottomChartPanel" class="col-span-6 border-r border-slate-200 p-3 flex flex-col overflow-hidden min-h-0 relative bg-white">
+              <div id="interactiveChartContainer" class="flex-1 flex flex-col overflow-hidden min-h-0">
+                <div id="chartHintBanner" class="text-[11px] bg-indigo-50 text-indigo-800 px-3 py-1 rounded mb-2 border border-indigo-100 flex items-center justify-between shrink-0">
+                  <span id="chartHintText">💡 選好 X 軸與 Y 軸後，圖表會自動根據查詢結果繪製。</span>
+                </div>
+                <div class="flex-1 relative min-h-0">
+                  <canvas id="queryResultChart"></canvas>
+                </div>
+              </div>
+
+              <div id="pythonOutputContainer" class="hidden flex-1 overflow-y-auto min-h-0 space-y-3 pr-1">
+                <div id="pyPlotWrapper" class="hidden shrink-0 bg-white border border-slate-200 rounded-xl p-2.5 shadow-sm text-center">
+                  <div class="text-[11px] font-bold text-emerald-700 mb-1.5 flex items-center justify-between px-2">
+                    <span>🎨 Python 繪圖輸出（點擊下方圖片或按鈕可放大檢視 👇）</span>
+                    <div class="flex items-center space-x-2">
+                      <button onclick="openPlotZoomModal(document.getElementById('pyPlotImage').src)" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-0.5 rounded font-bold shadow-sm transition">
+                        🔍 點此放大看高清大圖
+                      </button>
+                      <a id="pyPlotDownloadLink" download="python_plot.png" class="text-indigo-600 hover:underline">📥 下載圖片</a>
+                    </div>
+                  </div>
+                  <img id="pyPlotImage" src="" alt="Python Plot" class="max-h-[260px] mx-auto object-contain rounded cursor-zoom-in hover:opacity-95 transition border border- transparent hover:border-indigo-300" onclick="openPlotZoomModal(this.src)" title="點擊放大檢視高清大圖" />
+                </div>
+
+                <div class="shrink-0">
+                  <div class="text-[11px] font-bold text-slate-600 mb-1 px-1 flex items-center justify-between">
+                    <span>🖥️ Python 終端機文字輸出 (print / 模型規則)：</span>
+                  </div>
+                  <div id="pyConsoleWrapper" class="bg-slate-900 text-emerald-300 rounded-xl p-3.5 font-mono text-xs leading-relaxed whitespace-pre-wrap overflow-x-auto border border-slate-700 shadow-inner min-h-[120px]"></div>
+                </div>
+              </div>
+            </div>
+
+            <div id="bottomTablePanel" class="col-span-6 flex flex-col overflow-hidden min-h-0 bg-white">
+              <div id="quickStatsBar" class="px-3 py-1.5 bg-slate-50 border-b border-slate-200 text-[11px] text-slate-600 flex items-center space-x-3 overflow-x-auto shrink-0">
+                <span>執行 SQL 或回傳 DataFrame 後，此處顯示表格與數值摘要</span>
+              </div>
+
+              <div class="flex-1 overflow-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                  <thead id="resultTableHead" class="bg-slate-100 text-slate-700 sticky top-0 z-10 shadow-sm"></thead>
+                  <tbody id="resultTableBody" class="divide-y divide-slate-200"></tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ================= MODALS ================= -->
+
+  <div id="healthCheckModal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-50 p-6">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-bold">🏥 一鍵全表體檢：SOP 第 1 步（看主角）& 第 2 步（全表相關性掃描）</h2>
+          <p class="text-xs text-slate-300 mt-0.5">拿到任何新資料表時，先跑這個體檢，10 秒內鎖定真正值得畫圖的關鍵欄位！</p>
+        </div>
+        <button onclick="closeHealthCheckModal()" class="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-5 flex-1">
+        <div class="grid grid-cols-4 gap-4" id="hcSummaryCards"></div>
+        <div class="grid grid-cols-12 gap-5">
+          <div class="col-span-5 bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col">
+            <h3 class="text-xs font-bold text-slate-800 mb-1">📌 第 1 步：主角 (目標變數) 比例分佈</h3>
+            <p class="text-[11px] text-slate-500 mb-3">檢查是否存在「類別不平衡」。</p>
+            <div class="h-60 relative">
+              <canvas id="hcTargetChart"></canvas>
+            </div>
+          </div>
+          <div class="col-span-7 bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col">
+            <div class="flex items-center justify-between mb-1">
+              <h3 class="text-xs font-bold text-slate-800">📌 第 2 步：各欄位與主角的相關係數排行 (|r|)</h3>
+              <span class="text-[11px] bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded">紅色 = 關鍵特徵 (|r| ≥ 0.1)</span>
+            </div>
+            <p class="text-[11px] text-slate-500 mb-2">點擊下方關鍵欄位按鈕，可直接跳轉執行該欄位的「第 3 步：找分界線 SQL」！</p>
+            <div class="h-64 relative">
+              <canvas id="hcCorrChart"></canvas>
+            </div>
+            <div id="hcKeyFeatureButtons" class="mt-3 pt-2 border-t border-slate-200 flex flex-wrap gap-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="guideModal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-50 p-6">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[88vh] flex flex-col overflow-hidden">
+      <div class="px-6 py-4 bg-amber-600 text-white flex items-center justify-between">
+        <h2 class="text-base font-bold">📖 數據分析師的「SQL + Python 4 步思考與選圖 SOP」</h2>
+        <button onclick="closeGuideModal()" class="text-amber-100 hover:text-white text-xl font-bold">&times;</button>
+      </div>
+      <div class="p-6 overflow-y-auto space-y-4 text-xs leading-relaxed text-slate-700">
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <h3 class="font-bold text-sm text-indigo-700 mb-1">第 1 步：基礎體檢與看主角（目標變數 Y）</h3>
+          <p><strong>🐍 Python 寫法：</strong> <code>df.isnull().sum()</code>、<code>df.duplicated().sum()</code>、<code>df['目標欄位'].value_counts()</code></p>
+          <p><strong>💻 SQL 寫法：</strong> <code>SELECT 目標欄位, COUNT(*) FROM 表名 GROUP BY 目標欄位</code></p>
+        </div>
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <h3 class="font-bold text-sm text-indigo-700 mb-1">第 2 步：篩選重點配角（全表掃描 X 對 Y）</h3>
+          <p><strong>🐍 Python 寫法：</strong> <code>df.corr()['目標欄位'].sort_values()</code> 或 <code>sns.heatmap(df.corr())</code></p>
+          <p><strong>💻 SQL 寫法：</strong> <code>SELECT 目標欄位, AVG(欄位A), AVG(欄位B) FROM 表名 GROUP BY 目標欄位</code></p>
+        </div>
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <h3 class="font-bold text-sm text-indigo-700 mb-1">第 3 步：單挑重點特徵找「黃金分界線（Threshold）」</h3>
+          <p><strong>🐍 Python 寫法：</strong> <code>sns.boxplot(data=df, x='目標欄位', y='重點特徵')</code> 看箱子分界。</p>
+          <p><strong>💻 SQL 寫法：</strong> 用 <code>CASE WHEN</code> 或 <code>ROUND()</code> 切區間，搭配 <strong>雙軸折線長條圖</strong> 找轉折點。</p>
+        </div>
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <h3 class="font-bold text-sm text-indigo-700 mb-1">第 4 步：規則驗證與機器學習建模</h3>
+          <p><strong>🐍 Python 寫法：</strong> 用 <code>RandomForestClassifier</code> / <code>RandomForestRegressor</code> 抓出特徵重要性排行。</p>
+          <p><strong>💻 SQL 寫法：</strong> 用 <code>WITH</code> (CTE) 計算風險燈號總分與單一戰犯歸因。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="uploadModal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-50 p-6">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+      <div class="px-6 py-4 bg-indigo-600 text-white flex items-center justify-between">
+        <h2 class="text-base font-bold">➕ 匯入數據專案（支援單檔或多檔同時選取 .csv / .xlsx）</h2>
+        <button onclick="closeUploadModal()" class="text-indigo-200 hover:text-white text-xl font-bold">&times;</button>
+      </div>
+      <div class="p-6 space-y-4 text-xs">
+        <div class="p-3 bg-indigo-50 text-indigo-900 rounded-lg border border-indigo-100 leading-relaxed">
+          🪄 <strong>按資料夾乾淨歸檔：</strong>上傳的檔案會自動收進 <code>datasets/&lt;資料夾名稱&gt;/</code>，您也可以直接在電腦的 <code>datasets/</code> 下新增資料夾放 CSV，再點上方「🔄 掃描」載入！
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">1. 歸屬專案資料夾名稱（對應 <code>datasets/</code> 下的子資料夾）：</label>
+          <input type="text" id="uploadFolderInput" placeholder="例如: 02_sales_project (可輸入新資料夾名稱)" class="w-full border border-slate-300 rounded px-3 py-1.5 font-bold text-amber-900 bg-amber-50/50" />
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">2. 選擇本地檔案（可單選或多選 .csv, .xlsx, .xls）：</label>
+          <input type="file" id="csvFileInput" accept=".csv,.xlsx,.xls" multiple onchange="onCsvFilesSelected()" class="w-full border border-slate-300 rounded p-2 bg-slate-50" />
+          <div id="selectedFilesPreview" class="text-[11px] text-slate-500 mt-1"></div>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+          <label class="block font-bold text-slate-700">3. 當選取多個檔案時的處理方式：</label>
+          <label class="flex items-start space-x-2 cursor-pointer">
+            <input type="radio" name="csvImportMode" value="separate" checked class="mt-0.5 text-indigo-600" />
+            <span>
+              <strong class="text-slate-800">🗂️ 各自建立獨立資料表（適合不同結構的關聯表）</strong><br/>
+              <span class="text-[11px] text-slate-500">例如：一張「生產紀錄表」、一張「供應商資料表」，匯入後可用上方「🔗 多表關聯/合併」做 JOIN。</span>
+            </span>
+          </label>
+          <label class="flex items-start space-x-2 cursor-pointer pt-1">
+            <input type="radio" name="csvImportMode" value="concat" class="mt-0.5 text-indigo-600" />
+            <span>
+              <strong class="text-slate-800">📚 上下疊加成一張總表 pd.concat（適合欄位相同的多期報表）</strong><br/>
+              <span class="text-[11px] text-slate-500">例如：1月、2月、3月或不同機台的相同格式 CSV，系統會自動上下合併並加上 <code>SourceFile</code> 來源檔名欄。</span>
+            </span>
+          </label>
+        </div>
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">4. 自訂資料表名稱（選填，留空則依檔名命名）：</label>
+          <input type="text" id="customTableNameInput" placeholder="例如: sales_2026 或 merged_all" class="w-full border border-slate-300 rounded px-3 py-2" />
+        </div>
+        <div id="uploadStatusMsg" class="text-xs font-semibold text-indigo-600"></div>
+        <div class="flex justify-end space-x-2 pt-2">
+          <button onclick="closeUploadModal()" class="px-4 py-2 rounded bg-slate-200 text-slate-700 font-semibold">取消</button>
+          <button onclick="submitCsvUpload()" class="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow">🚀 開始匯入並生成程式</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Bilingual Column Dictionary & Markdown Table Parser -->
+  <div id="colDictModal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-50 p-6">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+      <div class="px-6 py-4 bg-sky-700 text-white flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-bold">🌐 多表中英欄位對照與分析用途字典 (<span id="colDictModalTableTitle">defects</span>)</h2>
+          <p class="text-xs text-sky-100 mt-0.5">可切換下方資料表分頁，設定每張表的中英欄位名稱與分析用途！</p>
+        </div>
+        <button onclick="closeColDictModal()" class="text-sky-200 hover:text-white text-xl font-bold">&times;</button>
+      </div>
+
+      <!-- Table Switcher Tabs inside Column Dictionary Modal -->
+      <div class="px-6 py-2.5 bg-slate-100 border-b border-slate-200 flex items-center space-x-2 overflow-x-auto shrink-0">
+        <span class="text-xs font-bold text-slate-600 shrink-0">📂 選擇要檢視/編輯的資料表：</span>
+        <div id="colDictTableTabs" class="flex items-center space-x-1.5"></div>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-5 flex-1 text-xs">
+        <!-- Smart Paste Area -->
+        <div class="p-4 bg-sky-50 border border-sky-200 rounded-xl space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-sky-900">🪄 快速批次貼上（支援 Markdown 表格 或 Excel 複製貼上）：</label>
+            <button onclick="parsePastedColDict()" class="bg-sky-600 hover:bg-sky-500 text-white font-bold px-3 py-1 rounded shadow-sm transition">
+              ⚡ 一鍵解析填入下方表格
+            </button>
+          </div>
+          <textarea id="colDictPasteInput" rows="4" class="w-full p-2.5 border border-sky-300 rounded-lg font-mono text-xs bg-white focus:outline-none" placeholder="直接貼上像這樣的表格即可自動對應：&#10;| 欄位 | 中文 | 分析用途 |&#10;| ProductionVolume | 每日生產量 | 了解產量規模 |&#10;| DefectRate | 每千件不良數 | 衡量品質 |"></textarea>
+        </div>
+
+        <!-- Column-by-Column Editor Table -->
+        <div class="border border-slate-200 rounded-xl overflow-hidden">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-slate-100 text-slate-700 border-b border-slate-200">
+              <tr>
+                <th class="px-3 py-2 w-1/4">原始欄位名稱 (英文)</th>
+                <th class="px-3 py-2 w-1/4">中文名稱 (對應顯示)</th>
+                <th class="px-3 py-2 w-1/2">分析用途 / 備註說明</th>
+              </tr>
+            </thead>
+            <tbody id="colDictEditorBody" class="divide-y divide-slate-200"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+        <span id="colDictStatusMsg" class="text-xs font-bold text-emerald-600"></span>
+        <div class="flex space-x-2">
+          <button onclick="closeColDictModal()" class="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 text-xs font-semibold">關閉</button>
+          <button onclick="saveColDictFromModal()" class="px-5 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold shadow">💾 儲存中英欄位設定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 5: Multi-Table Joiner & Union Tool -->
+  <div id="joinModal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-50 p-6">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+      <div class="px-6 py-4 bg-purple-700 text-white flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-bold">🔗 多表關聯 (JOIN / merge) 與上下合併 (UNION / concat) 工具</h2>
+          <p class="text-xs text-purple-100 mt-0.5">當您匯入多個 CSV 檔案後，可在這裡將不同表透過共同欄位「左右對齊關聯」，或將同結構表「上下疊加」，也能一鍵產生 SQL / Python 程式碼！</p>
+        </div>
+        <button onclick="closeJoinModal()" class="text-purple-200 hover:text-white text-xl font-bold">&times;</button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
+        <!-- Section 1: Horizontal Relational JOIN / pd.merge -->
+        <div class="p-4 bg-purple-50/70 border border-purple-200 rounded-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-extrabold text-purple-900">1️⃣ 左右橫向關聯（SQL JOIN / Python <code>pd.merge</code>）— 適合不同結構但有共同編號的表</h3>
+            <span id="sharedKeysHint" class="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded"></span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="p-3 bg-white rounded-lg border border-slate-200 space-y-2">
+              <label class="block font-bold text-slate-700">📌 左表（主表 Left Table）：</label>
+              <select id="joinLeftTable" onchange="onJoinTablesChange('left')" class="w-full border border-slate-300 rounded px-2 py-1.5 font-bold text-slate-800"></select>
+              <label class="block font-bold text-slate-700 pt-1">🔑 左表對齊鍵（Left Key）：</label>
+              <select id="joinLeftKey" class="w-full border border-slate-300 rounded px-2 py-1.5 font-mono text-indigo-700"></select>
+            </div>
+
+            <div class="p-3 bg-white rounded-lg border border-slate-200 flex flex-col justify-center space-y-2">
+              <label class="block font-bold text-slate-700 text-center">🔗 關聯方式 (Join Type)：</label>
+              <select id="joinHowSelect" class="w-full border border-purple-300 bg-purple-50 rounded px-2 py-1.5 font-bold text-purple-900">
+                <option value="left">LEFT JOIN（保留左表全部資料）</option>
+                <option value="inner">INNER JOIN（只保留兩表皆有的交集）</option>
+                <option value="outer">FULL OUTER（保留兩表所有資料）</option>
+              </select>
+              <label class="block font-bold text-slate-700 pt-1">💾 合併後新專案表名稱：</label>
+              <input type="text" id="joinNewTableName" placeholder="例如: defects_joined" class="w-full border border-slate-300 rounded px-2 py-1.5 font-mono" />
+            </div>
+
+            <div class="p-3 bg-white rounded-lg border border-slate-200 space-y-2">
+              <label class="block font-bold text-slate-700">📌 右表（對照表 Right Table）：</label>
+              <select id="joinRightTable" onchange="onJoinTablesChange('right')" class="w-full border border-slate-300 rounded px-2 py-1.5 font-bold text-slate-800"></select>
+              <label class="block font-bold text-slate-700 pt-1">🔑 右表對齊鍵（Right Key）：</label>
+              <select id="joinRightKey" class="w-full border border-slate-300 rounded px-2 py-1.5 font-mono text-indigo-700"></select>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-purple-200/70">
+            <div class="flex flex-wrap gap-2">
+              <button onclick="generateJoinSqlPreview()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm transition">
+                💻 產生 SQL JOIN 查詢並預覽
+              </button>
+              <button onclick="generateJoinPyPreview()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm transition">
+                🐍 產生 Python pd.merge 程式並執行
+              </button>
+            </div>
+            <button onclick="executeCombineJoin()" class="bg-purple-700 hover:bg-purple-600 text-white font-bold px-4 py-1.5 rounded-lg shadow transition">
+              💾 直接合併另存為新專案資料表
+            </button>
+          </div>
+        </div>
+
+        <!-- Section 2: Vertical Stacking UNION ALL / pd.concat -->
+        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+          <h3 class="text-sm font-extrabold text-slate-800">2️⃣ 上下縱向疊加（SQL UNION ALL / Python <code>pd.concat</code>）— 適合欄位相同的多份表</h3>
+          <p class="text-[11px] text-slate-500">勾選要上下疊加的資料表（系統會自動新增一欄 <code>SourceTable</code> 標記每筆資料來自哪張表）：</p>
+          <div id="unionTablesChecklist" class="grid grid-cols-2 md:grid-cols-3 gap-2 p-2.5 bg-white rounded-lg border border-slate-200 max-h-36 overflow-y-auto"></div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <div class="flex items-center space-x-2">
+              <label class="font-bold text-slate-700">💾 疊加後新專案表名稱：</label>
+              <input type="text" id="unionNewTableName" placeholder="例如: combined_all" class="border border-slate-300 rounded px-2.5 py-1 font-mono bg-white" />
+            </div>
+            <button onclick="executeCombineUnion()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-1.5 rounded-lg shadow transition">
+              📚 上下疊加另存為新專案資料表
+            </button>
+          </div>
+        </div>
+
+        <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 leading-relaxed">
+          💡 <strong>小技巧：在 Python 模式中直接呼叫任意資料表！</strong><br/>
+          系統已內建 <code>tables</code> 字典，您在 Python 編輯器裡隨時可以寫 <code>df_a = tables['表A']</code>、<code>df_b = tables['表B']</code>，直接用 <code>pd.merge(df_a, df_b, on='欄位')</code> 自由串接！
+        </div>
+      </div>
+
+      <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+        <span id="joinModalStatusMsg" class="text-xs font-bold text-purple-700"></span>
+        <button onclick="closeJoinModal()" class="px-4 py-1.5 rounded-lg bg-slate-200 text-slate-700 text-xs font-semibold">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 6: Full-Screen High-Res Plot Zoom Lightbox -->
+  <div id="plotZoomModal" class="fixed inset-0 bg-slate-950/85 hidden items-center justify-center z-50 p-4" onclick="if(event.target === this) closePlotZoomModal()">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-[96vw] w-full max-h-[94vh] flex flex-col overflow-hidden">
+      <div class="px-5 py-3 bg-slate-900 text-white flex items-center justify-between shrink-0">
+        <div class="flex items-center space-x-3">
+          <h2 class="text-sm font-bold">🔍 高清大圖檢視器（支援滾輪捲動與放大縮小）</h2>
+          <div class="flex items-center space-x-1.5 bg-slate-800 px-2 py-1 rounded-lg border border-slate-700 text-xs">
+            <button onclick="adjustPlotZoom(-25)" class="px-2 py-0.5 bg-slate-700 hover:bg-slate-600 rounded font-bold">➖ 縮小</button>
+            <span id="plotZoomScaleText" class="font-mono px-2 text-emerald-300 font-bold">100%</span>
+            <button onclick="adjustPlotZoom(25)" class="px-2 py-0.5 bg-slate-700 hover:bg-slate-600 rounded font-bold">➕ 放大</button>
+            <button onclick="resetPlotZoom()" class="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 rounded font-bold ml-1">適應視窗</button>
+          </div>
+        </div>
+        <div class="flex items-center space-x-2 text-xs">
+          <button onclick="openZoomedPlotInNewTab()" class="bg-sky-600 hover:bg-sky-500 text-white font-bold px-3 py-1.5 rounded-lg shadow transition">
+            ↗️ 在瀏覽器新分頁開啟原圖
+          </button>
+          <a id="zoomModalDownloadBtn" download="chart_highres.png" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg shadow transition">
+            📥 下載 PNG
+          </a>
+          <button onclick="closePlotZoomModal()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-3 py-1.5 rounded-lg ml-2">
+            ✕ 關閉 (ESC)
+          </button>
+        </div>
+      </div>
+      <div class="flex-1 overflow-auto bg-slate-100 p-4 flex items-center justify-center">
+        <img id="plotZoomModalImg" src="" alt="Zoomed Plot" class="max-w-full max-h-[82vh] object-contain rounded-lg shadow-lg bg-white p-2 transition-all duration-150" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Toast Notification (平滑輕量通知提示) -->
+  <div id="appToast" class="fixed bottom-6 right-6 z-50 bg-slate-900/95 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-2xl border border-slate-700 flex items-center space-x-2 transform translate-y-16 opacity-0 pointer-events-none transition-all duration-300">
+    <span id="appToastIcon">✅</span>
+    <span id="appToastText">通知訊息</span>
+  </div>
+
+  <!-- JavaScript Application Logic -->
+  <script>
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[ch]);
+    }
+    let allTablesMeta = {};
+    let currentTable = "superstoreorders";
+    let schemaSidebarFilter = "all"; // 'all' or specific table name
+    let colDictEditingTable = "defects"; // table currently selected in #colDictModal
+    let currentZoomScale = 100;
+    let colLabelMode = "both"; // 'both' | 'zh' | 'en'
+    let savedNotes = [];
+    let notesLangFilter = "all";
+    let currentNoteId = null;
+    let currentEditorLang = "sql";
+    let cmEditor = null;
+    let lastQueryResult = null;
+    let mainChartInstance = null;
+    let hcTargetChartInstance = null;
+    let hcCorrChartInstance = null;
+
+    // 側邊欄彈出與釘住控制狀態 (預設隨用彈出模式，用完自動收回)
+    let isSidebarPinned = localStorage.getItem("dataflow_sidebar_pinned") === "true";
+    let isSidebarFlyoutOpen = false;
+
+    // 資料夾分類與拖曳狀態
+    let customFolders = [];
+    let collapsedFolders = new Set();
+    let draggedNoteId = null;
+
+    function showToast(msg, icon = "✅") {
+      const toast = document.getElementById("appToast");
+      const iconEl = document.getElementById("appToastIcon");
+      const textEl = document.getElementById("appToastText");
+      if (!toast) return;
+      iconEl.textContent = icon;
+      textEl.textContent = msg;
+      toast.classList.remove("translate-y-16", "opacity-0", "pointer-events-none");
+      toast.classList.add("translate-y-0", "opacity-100");
+      if (window._toastTimer) clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        toast.classList.remove("translate-y-0", "opacity-100");
+        toast.classList.add("translate-y-16", "opacity-0", "pointer-events-none");
+      }, 2500);
+    }
+
+    function applySidebarState() {
+      const sidebar = document.getElementById("mainAppSidebar");
+      const backdrop = document.getElementById("sidebarBackdrop");
+      const dockIcon = document.getElementById("dockToggleIcon");
+      const pinBtnIcon = document.getElementById("sidebarPinBtnIcon");
+      const pinBtnText = document.getElementById("sidebarPinBtnText");
+      const dockPinIcon = document.getElementById("dockPinIcon");
+      const dockPinBtn = document.getElementById("dockPinToggleBtn");
+
+      if (!sidebar) return;
+
+      if (isSidebarPinned) {
+        // 固定釘住模式：嵌入排版，推開工作區
+        sidebar.className = "relative z-10 w-96 bg-white border-r border-slate-200 flex flex-col shrink-0 overflow-hidden shadow-none transition-all duration-300";
+        if (backdrop) backdrop.classList.add("hidden");
+        if (dockIcon) dockIcon.textContent = "◀";
+        if (pinBtnIcon) pinBtnIcon.textContent = "🔓";
+        if (pinBtnText) pinBtnText.textContent = "解除釘住";
+        if (dockPinIcon) dockPinIcon.textContent = "📌";
+        if (dockPinBtn) dockPinBtn.className = "w-8 h-8 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center text-xs transition border border-amber-500/40";
+      } else {
+        // 浮動彈出模式：平時收回在左側，用時彈出覆蓋
+        sidebar.className = isSidebarFlyoutOpen
+          ? "absolute left-11 top-0 bottom-0 z-40 w-96 bg-white border-r border-slate-200 flex flex-col shrink-0 overflow-hidden shadow-2xl transition-all duration-300 transform translate-x-0"
+          : "absolute left-11 top-0 bottom-0 z-40 w-96 bg-white border-r border-slate-200 flex flex-col shrink-0 overflow-hidden shadow-2xl transition-all duration-300 transform -translate-x-[110%]";
+
+        if (backdrop) {
+          if (isSidebarFlyoutOpen) backdrop.classList.remove("hidden");
+          else backdrop.classList.add("hidden");
+        }
+        if (dockIcon) dockIcon.textContent = isSidebarFlyoutOpen ? "◀" : "📂";
+        if (pinBtnIcon) pinBtnIcon.textContent = "📌";
+        if (pinBtnText) pinBtnText.textContent = "釘住";
+        if (dockPinIcon) dockPinIcon.textContent = "📌";
+        if (dockPinBtn) dockPinBtn.className = "w-8 h-8 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-amber-400 flex items-center justify-center text-xs transition";
+      }
+
+      if (cmEditor) {
+        setTimeout(() => cmEditor.refresh(), 200);
+      }
+      if (mainChartInstance) {
+        setTimeout(() => mainChartInstance.resize(), 200);
+      }
+    }
+
+    function toggleSidebarFlyout() {
+      if (isSidebarPinned) {
+        // 已釘住時點擊，切換為收合 (即解除釘住並收合)
+        isSidebarPinned = false;
+        localStorage.setItem("dataflow_sidebar_pinned", "false");
+        isSidebarFlyoutOpen = false;
+        applySidebarState();
+        showToast("側邊欄已收合為隨用彈出模式", "📂");
+      } else {
+        isSidebarFlyoutOpen = !isSidebarFlyoutOpen;
+        applySidebarState();
+      }
+    }
+
+    function openSidebarFlyout() {
+      if (isSidebarPinned) return;
+      isSidebarFlyoutOpen = true;
+      applySidebarState();
+    }
+
+    function closeSidebarFlyout() {
+      if (isSidebarPinned) return;
+      isSidebarFlyoutOpen = false;
+      applySidebarState();
+    }
+
+    function toggleSidebarPin() {
+      isSidebarPinned = !isSidebarPinned;
+      localStorage.setItem("dataflow_sidebar_pinned", isSidebarPinned ? "true" : "false");
+      isSidebarFlyoutOpen = false;
+      applySidebarState();
+      showToast(isSidebarPinned ? "📌 側邊欄已釘住（固定展開）" : "🔓 已取消釘住（啟用隨用彈出模式，用完自動彈回）", isSidebarPinned ? "📌" : "🔓");
+    }
+
+    function openSidebarTabWithFlyout(tab) {
+      switchSidebarTab(tab);
+      if (!isSidebarPinned) {
+        isSidebarFlyoutOpen = true;
+        applySidebarState();
+      }
+    }
+
+    // Format any column name according to current project's col_dict (with fallback across ALL tables for JOIN queries)
+    function formatColLabel(colName, modeOverride = null, preferredTable = null) {
+      if (!colName) return "";
+      const mode = modeOverride || colLabelMode;
+      if (mode === "en") return colName;
+
+      const lookupTable = preferredTable || currentTable;
+      let entry = null;
+
+      if (allTablesMeta[lookupTable] && allTablesMeta[lookupTable].col_dict && allTablesMeta[lookupTable].col_dict[colName]) {
+        entry = allTablesMeta[lookupTable].col_dict[colName];
+      } else {
+        // Fallback: search across all tables in allTablesMeta (helpful when SQL JOIN / pd.merge brings columns from other tables)
+        for (const tName of Object.keys(allTablesMeta)) {
+          const dict = allTablesMeta[tName].col_dict || {};
+          if (dict[colName] && dict[colName].zh) {
+            entry = dict[colName];
+            break;
+          }
+        }
+      }
+
+      const zh = entry && entry.zh ? entry.zh.trim() : "";
+      if (!zh) return colName;
+      if (mode === "zh") return zh;
+      return `${colName} (${zh})`;
+    }
+
+    function onColLabelModeChange(newMode) {
+      colLabelMode = newMode;
+      if (lastQueryResult) {
+        renderResultTable(lastQueryResult);
+        const curChartCfg = {
+          type: document.getElementById("chartTypeSelect").value,
+          x_col: document.getElementById("chartXSelect").value,
+          y1_col: document.getElementById("chartY1Select").value,
+          y2_col: document.getElementById("chartY2Select").value
+        };
+        populateChartAxisSelectors(lastQueryResult, curChartCfg);
+        renderQueryChart();
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      applySidebarState();
+
+      // 按 ESC 鍵快速收合側邊欄 (浮動模式下)
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          if (!isSidebarPinned && isSidebarFlyoutOpen) {
+            closeSidebarFlyout();
+          }
+        }
+      });
+
+      cmEditor = CodeMirror.fromTextArea(document.getElementById("codeEditorTextarea"), {
+        mode: "text/x-sql",
+        theme: "dracula",
+        lineNumbers: true,
+        matchBrackets: true,
+        styleActiveLine: true,
+        indentUnit: 4,
+        extraKeys: {
+          "Ctrl-Enter": () => runCurrentCode(),
+          "Cmd-Enter": () => runCurrentCode()
+        }
+      });
+
+      await loadTablesMeta();
+      await loadSavedNotesForCurrentTable();
+
+      if (savedNotes.length > 0) {
+        selectNoteById(savedNotes[0].id);
+      } else if (currentTable) {
+        cmEditor.setValue(`SELECT * FROM "${currentTable}" LIMIT 25;`);
+        runCurrentCode();
+      } else {
+        setEditorLanguage("sql");
+        cmEditor.setValue(`-- 📁 專案資料夾「datasets/${currentFolder}/」目前尚未匯入任何資料表\n-- 💡 請點選右上角「➕ 匯入數據 (單檔/多檔)」上傳 CSV 或 Excel 檔案\n-- 或將檔案放入 datasets/${currentFolder}/ 後點擊上方「🔄 掃描」即可自動建表並生成分析！`);
+      }
+    });
+
+    function setEditorLanguage(lang) {
+      currentEditorLang = lang === "python" ? "python" : "sql";
+      const btnSql = document.getElementById("modeBtnSql");
+      const btnPy = document.getElementById("modeBtnPython");
+      const sqlTemplates = document.getElementById("sqlTemplateBtns");
+      const pyTemplates = document.getElementById("pyTemplateBtns");
+      const runBtn = document.getElementById("runCodeBtn");
+      const chartControls = document.getElementById("chartControlsBar");
+
+      if (currentEditorLang === "sql") {
+        cmEditor.setOption("mode", "text/x-sql");
+        btnSql.className = "text-xs font-bold px-3 py-1 rounded-md bg-indigo-600 text-white shadow transition";
+        btnPy.className = "text-xs font-bold px-3 py-1 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition";
+        sqlTemplates.classList.remove("hidden");
+        sqlTemplates.classList.add("flex");
+        pyTemplates.classList.add("hidden");
+        pyTemplates.classList.remove("flex");
+        runBtn.className = "bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow flex items-center space-x-1 transition";
+        runBtn.innerHTML = "<span>▶ 執行 SQL 查詢 (Ctrl+Enter)</span>";
+        chartControls.classList.remove("hidden");
+        document.getElementById("interactiveChartContainer").classList.remove("hidden");
+        document.getElementById("pythonOutputContainer").classList.add("hidden");
+      } else {
+        cmEditor.setOption("mode", "text/x-python");
+        btnPy.className = "text-xs font-bold px-3 py-1 rounded-md bg-emerald-600 text-white shadow transition";
+        btnSql.className = "text-xs font-bold px-3 py-1 rounded-md bg-slate-800 text-slate-300 hover:bg-slate-700 transition";
+        pyTemplates.classList.remove("hidden");
+        pyTemplates.classList.add("flex");
+        sqlTemplates.classList.add("hidden");
+        sqlTemplates.classList.remove("flex");
+        runBtn.className = "bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow flex items-center space-x-1 transition";
+        runBtn.innerHTML = "<span>▶ 執行 Python 分析 (Ctrl+Enter)</span>";
+        chartControls.classList.add("hidden");
+        document.getElementById("interactiveChartContainer").classList.add("hidden");
+        document.getElementById("pythonOutputContainer").classList.remove("hidden");
+      }
+    }
+
+    function switchSidebarTab(tab) {
+      const notesBtn = document.getElementById("sideTabNotes");
+      const schemaBtn = document.getElementById("sideTabSchema");
+      const notesPanel = document.getElementById("sidebarNotesPanel");
+      const schemaPanel = document.getElementById("sidebarSchemaPanel");
+
+      if (tab === "notes") {
+        notesBtn.className = "px-2.5 py-1 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-md shadow-sm";
+        schemaBtn.className = "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-md";
+        notesPanel.classList.remove("hidden");
+        schemaPanel.classList.add("hidden");
+      } else {
+        schemaBtn.className = "px-2.5 py-1 text-xs font-bold text-sky-700 bg-white border border-sky-200 rounded-md shadow-sm";
+        notesBtn.className = "px-2.5 py-1 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-md";
+        schemaPanel.classList.remove("hidden");
+        notesPanel.classList.add("hidden");
+      }
+    }
+
+    function setNotesLangFilter(filter) {
+      notesLangFilter = filter;
+      document.getElementById("filterAllBtn").className = filter === "all"
+        ? "flex-1 text-[11px] font-bold py-0.5 rounded bg-slate-800 text-white"
+        : "flex-1 text-[11px] font-semibold py-0.5 rounded bg-slate-200 text-slate-700";
+      document.getElementById("filterSqlBtn").className = filter === "sql"
+        ? "flex-1 text-[11px] font-bold py-0.5 rounded bg-indigo-600 text-white"
+        : "flex-1 text-[11px] font-semibold py-0.5 rounded bg-slate-200 text-slate-700";
+      document.getElementById("filterPyBtn").className = filter === "python"
+        ? "flex-1 text-[11px] font-bold py-0.5 rounded bg-emerald-600 text-white"
+        : "flex-1 text-[11px] font-semibold py-0.5 rounded bg-slate-200 text-slate-700";
+      renderNotesList();
+    }
+
+    function setBottomViewMode(mode) {
+      const chartPanel = document.getElementById("bottomChartPanel");
+      const tablePanel = document.getElementById("bottomTablePanel");
+      const splitBtn = document.getElementById("viewModeSplitBtn");
+      const chartBtn = document.getElementById("viewModeChartBtn");
+      const tableBtn = document.getElementById("viewModeTableBtn");
+
+      splitBtn.className = "text-xs font-semibold px-2.5 py-1 rounded text-slate-600 hover:bg-slate-200";
+      chartBtn.className = "text-xs font-semibold px-2.5 py-1 rounded text-slate-600 hover:bg-slate-200";
+      tableBtn.className = "text-xs font-semibold px-2.5 py-1 rounded text-slate-600 hover:bg-slate-200";
+
+      if (mode === "split") {
+        splitBtn.className = "text-xs font-bold px-2.5 py-1 rounded bg-indigo-600 text-white";
+        chartPanel.className = "col-span-6 border-r border-slate-200 p-3 flex flex-col overflow-hidden min-h-0 relative bg-white";
+        tablePanel.className = "col-span-6 flex flex-col overflow-hidden min-h-0 bg-white";
+      } else if (mode === "chart") {
+        chartBtn.className = "text-xs font-bold px-2.5 py-1 rounded bg-indigo-600 text-white";
+        chartPanel.className = "col-span-12 p-3 flex flex-col overflow-hidden min-h-0 relative bg-white";
+        tablePanel.className = "hidden";
+      } else {
+        tableBtn.className = "text-xs font-bold px-2.5 py-1 rounded bg-indigo-600 text-white";
+        chartPanel.className = "hidden";
+        tablePanel.className = "col-span-12 flex flex-col overflow-hidden min-h-0 bg-white";
+      }
+      if (mainChartInstance) {
+        setTimeout(() => mainChartInstance.resize(), 50);
+      }
+    }
+
+    let currentFolder = "02_Superstore_Sales";
+    let allProjectFolders = [];
+
+    function getTablesInCurrentFolder() {
+      const allT = Object.keys(allTablesMeta);
+      if (!currentFolder || currentFolder === "__ALL__") return allT;
+      return allT.filter((t) => (allTablesMeta[t] && allTablesMeta[t].folder) === currentFolder);
+    }
+
+    // Load Tables, Project Folders & Column Dictionary
+    async function loadTablesMeta() {
+      const res = await fetch("/api/tables");
+      const data = await res.json();
+      allTablesMeta = data.tables || {};
+      allProjectFolders = data.folders || ["01_Manufacturing_Quality_ERP"];
+
+      // Keep currentFolder if it's a valid folder, otherwise fall back to first folder
+      if (allProjectFolders.length > 0 && !allProjectFolders.includes(currentFolder)) {
+        currentFolder = allProjectFolders[0];
+      }
+
+      // Populate Header Folder Selector
+      const folderSelector = document.getElementById("headerFolderSelector");
+      if (folderSelector) {
+        folderSelector.innerHTML = "";
+        allProjectFolders.forEach((fName) => {
+          const countInFolder = Object.keys(allTablesMeta).filter((t) => allTablesMeta[t].folder === fName).length;
+          const opt = document.createElement("option");
+          opt.value = fName;
+          opt.textContent = `${fName} (${countInFolder}表)`;
+          if (fName === currentFolder) opt.selected = true;
+          folderSelector.appendChild(opt);
+        });
+      }
+
+      // Populate Header Table Selector (filtered by currentFolder)
+      const headerSelector = document.getElementById("headerTableSelector");
+      headerSelector.innerHTML = "";
+      const folderTables = getTablesInCurrentFolder();
+      if (folderTables.length > 0) {
+        if (!folderTables.includes(currentTable)) {
+          const preferredTable = currentFolder === "03_Olist_Brazilian_Ecommerce"
+            ? "olist_orders_dataset" : folderTables[0];
+          currentTable = folderTables.includes(preferredTable) ? preferredTable : folderTables[0];
+        }
+        folderTables.forEach((t) => {
+          const opt = document.createElement("option");
+          opt.value = t;
+          opt.textContent = `${t} (${allTablesMeta[t].row_count} 筆)`;
+          if (t === currentTable) opt.selected = true;
+          headerSelector.appendChild(opt);
+        });
+      } else {
+        currentTable = "";
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "⚠️ (尚無資料表，請點右上角匯入)";
+        opt.selected = true;
+        headerSelector.appendChild(opt);
+      }
+
+      renderSchemaSidebar();
+    }
+
+    async function onFolderSwitch(newFolder) {
+      currentFolder = newFolder;
+      schemaSidebarFilter = "all";
+      await loadTablesMeta();
+      await onProjectSwitch(currentTable);
+      const folderTables = getTablesInCurrentFolder();
+      if (folderTables.length > 0) {
+        showStatus(`📁 已切換至專案資料夾「datasets/${currentFolder}/」（共 ${folderTables.length} 張資料表）`, false);
+      } else {
+        showStatus(`📁 已切換至專案資料夾「datasets/${currentFolder}/」（目前尚無資料表，可點右上角「➕ 匯入數據」）`, false);
+      }
+    }
+
+    async function scanDatasetsFolders() {
+      showStatus("🔄 正在掃描 datasets/ 資料夾下的所有子專案與 CSV...", false);
+      const res = await fetch("/api/scan_folders", { method: "POST" });
+      const data = await res.json();
+      await loadTablesMeta();
+      if (data.newly_imported && data.newly_imported.length > 0) {
+        const firstNew = data.newly_imported[0];
+        currentFolder = firstNew.folder;
+        currentTable = firstNew.table;
+        await loadTablesMeta();
+        await onProjectSwitch(currentTable);
+      }
+      showStatus(data.message || "✅ 資料夾掃描完成", false);
+    }
+
+    // Switch Project (Dataset) -> Automatically switches Schema AND Saved Notes!
+    async function onProjectSwitch(newTable) {
+      currentTable = newTable;
+      customFolders = [];
+      collapsedFolders.clear();
+      draggedNoteId = null;
+      renderSchemaSidebar();
+      if (!currentTable) {
+        savedNotes = [];
+        renderNotesList();
+        setEditorLanguage("sql");
+        cmEditor.setValue(`-- 📁 專案資料夾「datasets/${currentFolder}/」目前尚未匯入任何資料表\n-- 💡 請點選右上角「➕ 匯入數據 (單檔/多檔)」上傳 CSV 或 Excel 檔案\n-- 或將檔案放入 datasets/${currentFolder}/ 後點擊上方「🔄 掃描」即可自動建表並生成分析！`);
+        return;
+      }
+      await loadSavedNotesForCurrentTable();
+      if (savedNotes.length > 0) {
+        selectNoteById(savedNotes[0].id);
+      } else {
+        setEditorLanguage("sql");
+        cmEditor.setValue(`SELECT * FROM "${currentTable}" LIMIT 25;`);
+        runCurrentCode();
+      }
+    }
+
+    function onTargetColChange() {
+      showStatus(`💡 已將主角欄位切換為 ${document.getElementById("targetColSelector").value}。點上方「🪄 依主角重產程式」可更新整套分析範本！`, false);
+    }
+
+    async function deleteCurrentProject() {
+      if (currentTable === "defects") return;
+      if (!confirm(`確定要刪除專案資料表「${currentTable}」及其專屬筆記嗎？`)) return;
+
+      const res = await fetch("/api/delete_table", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: currentTable })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        alert(data.error || "刪除失敗");
+        return;
+      }
+      currentTable = "defects";
+      await loadTablesMeta();
+      await onProjectSwitch("defects");
+    }
+
+    function setSchemaSidebarFilter(filterVal) {
+      schemaSidebarFilter = filterVal;
+      renderSchemaSidebar();
+    }
+
+    function renderSchemaSidebar() {
+      const meta = currentTable ? allTablesMeta[currentTable] : null;
+      if (!meta || !meta.columns) {
+        const pLabel = document.getElementById("sidebarProjectLabel");
+        if (pLabel) pLabel.textContent = `📁 ${currentFolder} (尚無資料表)`;
+        const cCount = document.getElementById("schemaColCount");
+        if (cCount) cCount.textContent = "0";
+        const dockSchemaBadge = document.getElementById("dockSchemaBadge");
+        if (dockSchemaBadge) dockSchemaBadge.textContent = "0";
+        const targetSel = document.getElementById("targetColSelector");
+        if (targetSel) targetSel.innerHTML = "<option disabled selected>無欄位</option>";
+        const delBtn = document.getElementById("deleteProjectBtn");
+        if (delBtn) delBtn.classList.add("hidden");
+        const filterBar = document.getElementById("schemaTableFilterBar");
+        if (filterBar) filterBar.innerHTML = "";
+        const container = document.getElementById("columnsListContainer");
+        if (container) {
+          container.innerHTML = `
+            <div class="p-8 text-center text-slate-400 text-xs">
+              <div class="text-3xl mb-2">📁</div>
+              <div class="font-bold text-slate-700 mb-1">此專案資料夾目前為空</div>
+              <div class="text-slate-500 mb-4">尚未包含任何 CSV 或資料表</div>
+              <button onclick="openUploadModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg shadow transition">
+                ➕ 匯入數據 (單檔/多檔)
+              </button>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      document.getElementById("sidebarProjectLabel").textContent = `📁 ${currentFolder} / ${currentTable}`;
+
+      // Tables belonging to the currently selected project folder
+      const allTableNames = getTablesInCurrentFolder();
+      const totalColsAllTables = allTableNames.reduce((acc, t) => acc + ((allTablesMeta[t] && allTablesMeta[t].col_count) || 0), 0);
+      const displayColCount = schemaSidebarFilter === "all" ? `${totalColsAllTables}` : meta.col_count;
+      document.getElementById("schemaColCount").textContent = displayColCount;
+      const dockSchemaBadge = document.getElementById("dockSchemaBadge");
+      if (dockSchemaBadge) dockSchemaBadge.textContent = displayColCount;
+
+      const delBtn = document.getElementById("deleteProjectBtn");
+      if (currentTable === "defects") {
+        delBtn.classList.add("hidden");
+      } else {
+        delBtn.classList.remove("hidden");
+      }
+
+      const targetSel = document.getElementById("targetColSelector");
+      targetSel.innerHTML = "";
+      meta.columns.forEach((c, idx) => {
+        const opt = document.createElement("option");
+        opt.value = c.name;
+        const zhSuffix = c.zh ? ` (${c.zh})` : "";
+        opt.textContent = `${c.name}${zhSuffix} [${c.unique_count}種值]`;
+        if (idx === meta.columns.length - 1) opt.selected = true;
+        targetSel.appendChild(opt);
+      });
+
+      // Render multi-table filter buttons in the sidebar
+      const filterBar = document.getElementById("schemaTableFilterBar");
+      if (filterBar) {
+        filterBar.innerHTML = "";
+        const btnAll = document.createElement("button");
+        btnAll.onclick = () => setSchemaSidebarFilter("all");
+        btnAll.className = schemaSidebarFilter === "all"
+          ? "text-[11px] font-bold px-2 py-0.5 rounded bg-indigo-600 text-white shadow-sm"
+          : "text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-200 text-slate-700 hover:bg-indigo-100";
+        btnAll.textContent = `📚 全部表 (${allTableNames.length})`;
+        filterBar.appendChild(btnAll);
+
+        allTableNames.forEach((tName) => {
+          const btnT = document.createElement("button");
+          btnT.onclick = () => setSchemaSidebarFilter(tName);
+          btnT.className = schemaSidebarFilter === tName
+            ? "text-[11px] font-bold px-2 py-0.5 rounded bg-sky-600 text-white shadow-sm"
+            : "text-[11px] font-semibold px-2 py-0.5 rounded bg-white border border-slate-300 text-slate-700 hover:bg-sky-50";
+          btnT.textContent = `${tName} (${allTablesMeta[tName].col_count})`;
+          filterBar.appendChild(btnT);
+        });
+      }
+
+      const container = document.getElementById("columnsListContainer");
+      container.innerHTML = "";
+
+      // Order tables: currentTable first, then others
+      const orderedTables = [
+        currentTable,
+        ...allTableNames.filter((t) => t !== currentTable)
+      ].filter((t) => schemaSidebarFilter === "all" || t === schemaSidebarFilter);
+
+      orderedTables.forEach((tName) => {
+        const tMeta = allTablesMeta[tName];
+        if (!tMeta || !tMeta.columns) return;
+
+        // Table Section Group Wrapper
+        const sectionDiv = document.createElement("div");
+        sectionDiv.className = "rounded-xl border border-slate-300 bg-white overflow-hidden shadow-sm";
+
+        const isCurrent = tName === currentTable;
+        const headerBg = isCurrent ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-100";
+
+        const headerEl = document.createElement("div");
+        headerEl.className = `px-3 py-2 ${headerBg} flex items-center justify-between text-xs`;
+        headerEl.innerHTML = `
+          <div class="flex items-center space-x-1.5 truncate">
+            <span class="font-extrabold">📂 資料表：${escapeHtml(tName)}</span>
+            <span class="text-[10px] opacity-85">(${tMeta.row_count}筆 / ${tMeta.col_count}欄)</span>
+          </div>
+          <button data-edit-table class="text-[10px] bg-white/20 hover:bg-white/30 text-white px-2 py-0.5 rounded font-bold shrink-0">
+            ✏️ 編輯此表
+          </button>
+        `;
+        headerEl.querySelector("[data-edit-table]").onclick = () => openColDictModal(tName);
+        sectionDiv.appendChild(headerEl);
+
+        const cardsWrapper = document.createElement("div");
+        cardsWrapper.className = "p-2 space-y-2 bg-slate-50/60";
+
+        tMeta.columns.forEach((col) => {
+          const card = document.createElement("div");
+          card.className = "p-2.5 rounded-lg border border-slate-200 bg-white hover:shadow-sm transition text-xs";
+
+          let rangeInfo = `唯一值: ${col.unique_count}`;
+          if (col.is_numeric && col.min !== undefined) {
+            rangeInfo = `範圍: ${col.min} ~ ${col.max} | 平均: ${col.mean}`;
+          }
+
+          const zhBadge = col.zh
+            ? `<span class="text-[11px] font-bold text-sky-700 bg-sky-50 border border-sky-200 px-1.5 py-0.5 rounded">${escapeHtml(col.zh)}</span>`
+            : "";
+          const purposeHtml = col.purpose
+            ? `<div class="text-[11px] text-amber-800 bg-amber-50/70 px-2 py-0.5 rounded border border-amber-200/60 mb-1.5">📌 用途：${escapeHtml(col.purpose)}</div>`
+            : "";
+
+          card.innerHTML = `
+            <div class="flex items-center justify-between mb-1 gap-1">
+              <div class="flex items-center gap-1.5 truncate">
+                <button data-insert-column class="font-bold text-slate-800 hover:text-indigo-600 text-left truncate" title="點擊插入欄位名稱 ${escapeHtml(col.name)}">
+                  ${escapeHtml(col.name)}
+                </button>
+                ${zhBadge}
+              </div>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-mono shrink-0">${escapeHtml(col.dtype)}</span>
+            </div>
+            ${purposeHtml}
+            <div class="text-[11px] text-slate-500 mb-2">${rangeInfo}</div>
+            <div class="flex space-x-1.5">
+              <button data-explore-dist class="flex-1 bg-slate-50 hover:bg-indigo-50 text-indigo-700 border border-indigo-200 rounded py-1 text-[11px] font-semibold transition">
+                📊 看分佈
+              </button>
+              <button data-explore-target class="flex-1 bg-slate-50 hover:bg-rose-50 text-rose-700 border border-rose-200 rounded py-1 text-[11px] font-semibold transition">
+                🎯 對比主角
+              </button>
+            </div>
+          `;
+          card.querySelector("[data-insert-column]").onclick = () => insertTextAtCursor(col.name);
+          card.querySelector("[data-explore-dist]").onclick = () => autoExploreColumn(col.name, "dist", tName);
+          card.querySelector("[data-explore-target]").onclick = () => autoExploreColumn(col.name, "vs_target", tName);
+          cardsWrapper.appendChild(card);
+        });
+
+        sectionDiv.appendChild(cardsWrapper);
+        container.appendChild(sectionDiv);
+      });
+    }
+
+    function autoExploreColumn(colName, mode, tableOverride = null) {
+      const targetTable = tableOverride || currentTable;
+      const meta = allTablesMeta[targetTable];
+      if (!meta) return;
+      const colObj = meta.columns.find((c) => c.name === colName);
+      const targetCol = (targetTable === currentTable && document.getElementById("targetColSelector").value)
+        ? document.getElementById("targetColSelector").value
+        : meta.columns[meta.columns.length - 1].name;
+
+      setEditorLanguage("sql");
+      let sql = "";
+      let title = "";
+      let note = "";
+      let chartCfg = {};
+
+      if (mode === "dist") {
+        if (colObj && colObj.is_numeric && colObj.unique_count > 25) {
+          const step = ((colObj.max - colObj.min) / 8).toFixed(2);
+          sql = `-- 自動切區間檢查 ${targetTable}.${colName} 的數值分佈\nSELECT \n    ROUND("${colName}" / ${step}) * ${step} AS "${colName}_區間起點",\n    COUNT(*) AS 筆數\nFROM "${targetTable}"\nGROUP BY "${colName}_區間起點"\nORDER BY "${colName}_區間起點";`;
+          chartCfg = { type: "bar", x_col: `${colName}_區間起點`, y1_col: "筆數", y2_col: "" };
+        } else {
+          sql = `SELECT \n    "${colName}",\n    COUNT(*) AS 筆數\nFROM "${targetTable}"\nGROUP BY "${colName}"\nORDER BY "${colName}";`;
+          chartCfg = { type: "bar", x_col: colName, y1_col: "筆數", y2_col: "" };
+        }
+        title = `【單欄分佈探索】檢查 ${targetTable}.${colName} 的數值分佈`;
+        note = `💡 自動產生之單欄分佈查詢：\n觀察 ${colName} 在 ${targetTable} 中的分佈是否均勻、有無極端值。`;
+      } else {
+        if (colObj && colObj.is_numeric && colObj.unique_count > 25) {
+          const span = colObj.max - colObj.min;
+          const step = span > 100 ? Math.round(span / 8) : Number((span / 8).toFixed(2)) || 1;
+          sql = `-- 對比 ${targetTable}.${colName} 不同區間下的 ${targetCol} 變化\nSELECT \n    CAST(ROUND("${colName}" / ${step}) * ${step} AS TEXT) AS "${colName}_分組區間",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG("${targetCol}"), 4) AS "${targetCol}_平均值"\nFROM "${targetTable}"\nGROUP BY ROUND("${colName}" / ${step}) * ${step}\nORDER BY ROUND("${colName}" / ${step}) * ${step};`;
+          chartCfg = {
+            type: "bar_line",
+            x_col: `${colName}_分組區間`,
+            y1_col: `${targetCol}_平均值`,
+            y2_col: "總筆數"
+          };
+        } else {
+          sql = `SELECT \n    "${colName}",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG("${targetCol}"), 4) AS "${targetCol}_平均值"\nFROM "${targetTable}"\nGROUP BY "${colName}"\nORDER BY "${colName}";`;
+          chartCfg = {
+            type: "bar_line",
+            x_col: colName,
+            y1_col: `${targetCol}_平均值`,
+            y2_col: "總筆數"
+          };
+        }
+        title = `【對比主角分析】${targetTable}.${colName} 對 ${targetCol} 的影響`;
+        note = `💡 【分析師看圖重點】：\n觀察紅色折線在不同 ${colName} 區間下是否有出現「突然跳升或驟降」的轉折點！`;
+      }
+
+      currentNoteId = null;
+      cmEditor.setValue(sql);
+      document.getElementById("noteTitleInput").value = title;
+      document.getElementById("noteStepTagInput").value = "Step 3: 找分界線 (Threshold)";
+      document.getElementById("noteContentInput").value = note;
+      renderNotesList();
+      runCurrentCode(chartCfg);
+    }
+
+    function insertTextAtCursor(text) {
+      const doc = cmEditor.getDoc();
+      const cursor = doc.getCursor();
+      doc.replaceRange(text, cursor);
+      cmEditor.focus();
+    }
+
+    function insertCodeTemplate(type) {
+      const meta = allTablesMeta[currentTable];
+      const cols = meta && meta.columns ? meta.columns : [];
+      const targetCol = document.getElementById("targetColSelector").value || (cols.length ? cols[cols.length - 1].name : "id");
+      const firstCol = cols.length ? cols[0].name : targetCol;
+
+      if (type === "sql_preview") {
+        setEditorLanguage("sql");
+        cmEditor.setValue(`-- 查看專案 ${currentTable} 前 20 筆資料\nSELECT * FROM "${currentTable}" LIMIT 20;`);
+      } else if (type === "sql_groupby") {
+        setEditorLanguage("sql");
+        cmEditor.setValue(`-- 依主角 ${targetCol} 分組比較平均值\nSELECT \n    "${targetCol}",\n    COUNT(*) AS 筆數,\n    ROUND(AVG("${firstCol}"), 2) AS "平均_${firstCol}"\nFROM "${currentTable}"\nGROUP BY "${targetCol}";`);
+      } else if (type === "sql_casewhen") {
+        setEditorLanguage("sql");
+        cmEditor.setValue(`-- 用 CASE WHEN 切區間觀察 ${targetCol}\nSELECT \n    "${firstCol}",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG("${targetCol}"), 2) AS "${targetCol}_平均"\nFROM "${currentTable}"\nGROUP BY "${firstCol}"\nORDER BY "${firstCol}"\nLIMIT 20;`);
+      } else if (type === "py_check") {
+        setEditorLanguage("python");
+        cmEditor.setValue(`# 檢查每個欄位的空值數量\nprint("=== 空值檢查 ===")\nprint(df.isnull().sum())\n\n# 檢查完全重複的紀錄\nprint("\\n=== 重複紀錄筆數 ===")\nprint(df.duplicated().sum())\n\n# 查看數值欄位的統計摘要 (最後一行自動轉成右下角表格)\ndf.describe().T.round(2)`);
+      } else if (type === "py_groupby") {
+        setEditorLanguage("python");
+        cmEditor.setValue(`# 依 ${targetCol} 分組比較所有數值欄位的平均值\nnum_cols = df.select_dtypes(include=[np.number]).columns\ngrouped = df.groupby('${targetCol}')[num_cols].mean().T\nprint("依 ${targetCol} 分組平均對比完成！")\ngrouped.round(3)`);
+      } else if (type === "py_boxplot") {
+        setEditorLanguage("python");
+        cmEditor.setValue(`# 使用 Seaborn 繪製箱型圖比較 ${firstCol} 在不同 ${targetCol} 下的分佈\nplt.figure(figsize=(7, 4.5), dpi=130)\nsns.boxplot(data=df, x='${targetCol}', y='${firstCol}', palette='Set2', width=0.45)\nplt.title('${firstCol} vs ${targetCol} 分組箱型圖', fontweight='bold')\nplt.tight_layout()`);
+      }
+      runCurrentCode();
+    }
+
+    // 取得目前專案中所有資料夾清單 (包含筆記所屬資料夾與當前專案自訂資料夾)
+    function getAllFoldersList() {
+      const folderSet = new Set();
+      const defaultOrder = [
+        "Step 1: 看目標 (Target)",
+        "Step 2: 篩選重點 (Filter)",
+        "Step 3: 找分界線 (Threshold)",
+        "Step 4: 規則驗證 (Validate)"
+      ];
+
+      // 1. 僅讀取當前專案資料表現有的筆記資料夾
+      savedNotes.forEach((n) => {
+        const f = n.folder || n.step_tag || "📁 未分類";
+        folderSet.add(f);
+      });
+
+      // 2. 加上當前專案自訂的資料夾
+      customFolders.forEach((f) => folderSet.add(f));
+
+      if (folderSet.size === 0) {
+        return [];
+      }
+
+      const all = Array.from(folderSet);
+      all.sort((a, b) => {
+        const idxA = defaultOrder.indexOf(a);
+        const idxB = defaultOrder.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        if (a === "📁 未分類" || a === "未分類") return 1;
+        if (b === "📁 未分類" || b === "未分類") return -1;
+        return a.localeCompare(b, "zh-Hant");
+      });
+      return all;
+    }
+
+    function updateNoteFolderSelect(selectedFolder = null) {
+      const select = document.getElementById("noteFolderSelect");
+      if (!select) return;
+      const folders = getAllFoldersList();
+      select.innerHTML = "";
+      const displayFolders = folders.length > 0 ? folders : [
+        "Step 1: 看目標 (Target)",
+        "Step 2: 篩選重點 (Filter)",
+        "Step 3: 找分界線 (Threshold)",
+        "Step 4: 規則驗證 (Validate)",
+        "📁 未分類"
+      ];
+      displayFolders.forEach((f) => {
+        const opt = document.createElement("option");
+        opt.value = f;
+        opt.textContent = `📁 ${f}`;
+        if (selectedFolder && f === selectedFolder) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    function promptCreateNewFolder() {
+      const fName = prompt("請輸入新分類資料夾名稱 (例如: 01_銷量趨勢探索 / 02_高虧損商品分析):");
+      if (!fName || !fName.trim()) return;
+      const clean = fName.trim();
+      if (!customFolders.includes(clean)) {
+        customFolders.push(clean);
+        const projectKey = `${currentFolder}::${currentTable}`;
+        try {
+          localStorage.setItem("dataflow_custom_folders_" + projectKey, JSON.stringify(customFolders));
+        } catch (e) {}
+      }
+      updateNoteFolderSelect(clean);
+      renderNotesList();
+      showToast(`已在目前專案建立新資料夾【${clean}】，現在可將程式卡片拖入！`, "📁");
+    }
+
+    function deleteFolder(folderName) {
+      if (!confirm(`確定要刪除資料夾「${folderName}」嗎？裡面的程式筆記將移至「未分類」。`)) return;
+      savedNotes.forEach((n) => {
+        const currentF = n.folder || n.step_tag || "📁 未分類";
+        if (currentF === folderName) {
+          n.folder = "📁 未分類";
+        }
+      });
+      customFolders = customFolders.filter((f) => f !== folderName);
+      const projectKey = `${currentFolder}::${currentTable}`;
+      try {
+        localStorage.setItem("dataflow_custom_folders_" + projectKey, JSON.stringify(customFolders));
+      } catch (e) {}
+      collapsedFolders.delete(folderName);
+      renderNotesList();
+      saveNotesToServerQuietly();
+      showToast(`已刪除資料夾【${folderName}】`, "🗑️");
+    }
+
+    function toggleFolderCollapse(folderName) {
+      if (collapsedFolders.has(folderName)) {
+        collapsedFolders.delete(folderName);
+      } else {
+        collapsedFolders.add(folderName);
+      }
+      renderNotesList();
+    }
+
+    function toggleAllFoldersCollapse() {
+      const all = getAllFoldersList();
+      if (collapsedFolders.size > 0) {
+        collapsedFolders.clear();
+      } else {
+        all.forEach((f) => collapsedFolders.add(f));
+      }
+      renderNotesList();
+    }
+
+    // Drag-and-Drop 拖曳處理函式
+    function handleNoteDragStart(e, noteId) {
+      draggedNoteId = noteId;
+      e.dataTransfer.setData("text/plain", noteId);
+      e.dataTransfer.effectAllowed = "move";
+      if (e.currentTarget) {
+        e.currentTarget.classList.add("opacity-40", "scale-95");
+      }
+    }
+
+    function handleNoteDragEnd(e) {
+      if (e.currentTarget) {
+        e.currentTarget.classList.remove("opacity-40", "scale-95");
+      }
+      draggedNoteId = null;
+      document.querySelectorAll(".folder-drop-zone").forEach((el) => {
+        el.classList.remove("ring-2", "ring-indigo-500", "bg-indigo-50", "border-indigo-400");
+      });
+    }
+
+    function handleFolderDragOver(e, el) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      el.classList.add("ring-2", "ring-indigo-500", "bg-indigo-50", "border-indigo-400");
+    }
+
+    function handleFolderDragLeave(e, el) {
+      el.classList.remove("ring-2", "ring-indigo-500", "bg-indigo-50", "border-indigo-400");
+    }
+
+    async function handleFolderDrop(e, el, targetFolder) {
+      e.preventDefault();
+      el.classList.remove("ring-2", "ring-indigo-500", "bg-indigo-50", "border-indigo-400");
+      const noteId = draggedNoteId || e.dataTransfer.getData("text/plain");
+      if (!noteId) return;
+
+      const targetNote = savedNotes.find((n) => n.id === noteId);
+      if (!targetNote) return;
+
+      const oldFolder = targetNote.folder || targetNote.step_tag || "📁 未分類";
+      if (oldFolder === targetFolder) return;
+
+      targetNote.folder = targetFolder;
+      if (currentNoteId === targetNote.id) {
+        updateNoteFolderSelect(targetFolder);
+      }
+      renderNotesList();
+      await saveNotesToServerQuietly();
+      showToast(`已將「${targetNote.title}」拖曳移至【${targetFolder}】`, "📁");
+    }
+
+    async function moveNoteToFolder(noteId, targetFolder) {
+      const targetNote = savedNotes.find((n) => n.id === noteId);
+      if (!targetNote) return;
+      targetNote.folder = targetFolder;
+      if (currentNoteId === targetNote.id) {
+        updateNoteFolderSelect(targetFolder);
+      }
+      renderNotesList();
+      await saveNotesToServerQuietly();
+      showToast(`已移動「${targetNote.title}」至【${targetFolder}】`, "📁");
+    }
+
+    async function saveNotesToServerQuietly() {
+      try {
+        await fetch("/api/notes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ table: currentTable, folder: currentFolder, notes: savedNotes })
+        });
+      } catch (err) {
+        console.error("靜默儲存失敗:", err);
+      }
+    }
+
+    // Load & Render Saved Notes for Current Project Table
+    async function loadSavedNotesForCurrentTable() {
+      if (!currentTable) {
+        savedNotes = [];
+        customFolders = [];
+        renderNotesList();
+        return;
+      }
+      const res = await fetch(`/api/notes?table=${encodeURIComponent(currentTable)}&folder=${encodeURIComponent(currentFolder)}`);
+      const data = await res.json();
+      savedNotes = data.notes || [];
+
+      // 嚴格依專案資料表完全隔離自訂資料夾
+      const projectKey = `${currentFolder}::${currentTable}`;
+      try {
+        const stored = JSON.parse(localStorage.getItem("dataflow_custom_folders_" + projectKey) || "[]");
+        customFolders = Array.isArray(stored) ? stored : [];
+      } catch (e) {
+        customFolders = [];
+      }
+
+      // 提取現有筆記中的自訂資料夾
+      savedNotes.forEach((n) => {
+        if (n.folder && !customFolders.includes(n.folder)) {
+          customFolders.push(n.folder);
+        }
+      });
+
+      renderNotesList();
+    }
+
+    function renderNotesList() {
+      if (!currentTable) {
+        document.getElementById("notesCount").textContent = "0";
+        const dockNotesBadge = document.getElementById("dockNotesBadge");
+        if (dockNotesBadge) dockNotesBadge.textContent = "0";
+        const container = document.getElementById("notesListContainer");
+        if (container) {
+          container.innerHTML = `
+            <div class="p-8 text-center text-slate-400 text-xs">
+              <div class="text-3xl mb-2">📄</div>
+              <div class="font-bold text-slate-700 mb-1">目前專案尚未建立資料表</div>
+              <div class="text-slate-500 mb-4">匯入數據後將自動生成專屬分析程式庫</div>
+              <button onclick="openUploadModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg shadow transition">
+                ➕ 匯入數據
+              </button>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      const filtered = savedNotes.filter((n) => {
+        const lang = n.lang || "sql";
+        if (notesLangFilter === "all") return true;
+        return lang === notesLangFilter;
+      });
+
+      document.getElementById("notesCount").textContent = filtered.length;
+      const dockNotesBadge = document.getElementById("dockNotesBadge");
+      if (dockNotesBadge) dockNotesBadge.textContent = filtered.length;
+
+      const container = document.getElementById("notesListContainer");
+      container.innerHTML = "";
+
+      const allFolders = getAllFoldersList();
+      updateNoteFolderSelect(document.getElementById("noteFolderSelect")?.value);
+
+      if (allFolders.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center text-slate-400 text-xs">
+            <div class="text-3xl mb-2">📝</div>
+            <div class="font-bold text-slate-700 mb-1">目前專案尚未建立程式筆記</div>
+            <div class="text-slate-500 mb-4">您可以直接在右側代碼區撰寫並點「💾 儲存筆記」，或點擊下方按鈕建立第一個分類資料夾</div>
+            <div class="flex items-center justify-center space-x-2">
+              <button onclick="createNewBlankNoteInFolder('Step 1: 看目標 (Target)')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg shadow transition">
+                ➕ 撰寫第一則筆記
+              </button>
+              <button onclick="promptCreateNewFolder()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-3 py-1.5 rounded-lg transition">
+                📁 新增分類資料夾
+              </button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // 依照資料夾分組 (Group by folder)
+      const folderGroups = {};
+      allFolders.forEach((f) => (folderGroups[f] = []));
+
+      filtered.forEach((item) => {
+        const f = item.folder || item.step_tag || "📁 未分類";
+        if (!folderGroups[f]) folderGroups[f] = [];
+        folderGroups[f].push(item);
+      });
+
+      // 渲染每個資料夾區塊
+      allFolders.forEach((folderName) => {
+        const itemsInFolder = folderGroups[folderName] || [];
+        // 若該資料夾沒有筆記且不是自訂資料夾，在有語言篩選時可跳過
+        if (itemsInFolder.length === 0 && notesLangFilter !== "all" && !customFolders.includes(folderName)) {
+          return;
+        }
+
+        const isCollapsed = collapsedFolders.has(folderName);
+        const folderDiv = document.createElement("div");
+        folderDiv.className = "rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden mb-2 transition-all";
+
+        // 資料夾 Header (也是可接受 Drop 的目標)
+        const headerDiv = document.createElement("div");
+        headerDiv.className = "folder-drop-zone px-2.5 py-2 bg-slate-100/90 hover:bg-slate-200/80 cursor-pointer flex items-center justify-between text-xs select-none border-b border-transparent transition";
+        headerDiv.ondragover = (e) => handleFolderDragOver(e, headerDiv);
+        headerDiv.ondragleave = (e) => handleFolderDragLeave(e, headerDiv);
+        headerDiv.ondrop = (e) => handleFolderDrop(e, headerDiv, folderName);
+
+        const isCustom = customFolders.includes(folderName);
+        const arrowIcon = isCollapsed ? "▶" : "▼";
+
+        headerDiv.innerHTML = `
+          <div data-toggle-folder class="flex items-center space-x-1.5 truncate flex-1">
+            <span class="text-[10px] text-slate-500 font-mono w-3">${arrowIcon}</span>
+            <span class="text-sm">📁</span>
+            <span class="font-bold text-slate-800 truncate">${escapeHtml(folderName)}</span>
+            <span class="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.2 rounded-full font-bold">${itemsInFolder.length}</span>
+          </div>
+          <div class="flex items-center space-x-1 shrink-0 ml-1">
+            <button data-add-note class="text-[10px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold" title="在此資料夾建立新筆記">
+              +
+            </button>
+            ${
+              isCustom && itemsInFolder.length === 0
+                ? `<button data-delete-folder class="text-[10px] text-rose-500 hover:bg-rose-50 px-1 py-0.5 rounded" title="刪除此空資料夾">🗑️</button>`
+                : ""
+            }
+          </div>
+        `;
+        headerDiv.querySelector("[data-toggle-folder]").onclick = () => toggleFolderCollapse(folderName);
+        headerDiv.querySelector("[data-add-note]").onclick = () => createNewBlankNoteInFolder(folderName);
+        const deleteFolderButton = headerDiv.querySelector("[data-delete-folder]");
+        if (deleteFolderButton) deleteFolderButton.onclick = () => deleteFolder(folderName);
+        folderDiv.appendChild(headerDiv);
+
+        // 資料夾卡片清單 (當未折疊時)
+        if (!isCollapsed) {
+          const bodyDiv = document.createElement("div");
+          bodyDiv.className = "folder-drop-zone p-2 space-y-1.5 bg-slate-50/50 min-h-[38px] transition";
+          bodyDiv.ondragover = (e) => handleFolderDragOver(e, bodyDiv);
+          bodyDiv.ondragleave = (e) => handleFolderDragLeave(e, bodyDiv);
+          bodyDiv.ondrop = (e) => handleFolderDrop(e, bodyDiv, folderName);
+
+          if (itemsInFolder.length === 0) {
+            bodyDiv.innerHTML = `<div class="text-[11px] text-slate-400 text-center py-2 border border-dashed border-slate-300 rounded-lg">（空資料夾，按住上方程式卡片拖曳到這裡歸檔）</div>`;
+          } else {
+            itemsInFolder.forEach((item, index) => {
+              const isSelected = item.id === currentNoteId;
+              const lang = item.lang || "sql";
+
+              const cardDiv = document.createElement("div");
+              cardDiv.draggable = true;
+              cardDiv.ondragstart = (e) => handleNoteDragStart(e, item.id);
+              cardDiv.ondragend = (e) => handleNoteDragEnd(e);
+
+              cardDiv.onclick = (e) => {
+                // 若點擊的是右上角下拉選單，不觸發載入
+                if (e.target.tagName === "SELECT") return;
+                selectNoteById(item.id, true);
+              };
+
+              cardDiv.className = `p-2 rounded-lg border cursor-grab active:cursor-grabbing transition ${
+                isSelected
+                  ? "bg-indigo-50/90 border-indigo-500 shadow-sm ring-1 ring-indigo-400"
+                  : "bg-white border-slate-200 hover:border-indigo-300 hover:bg-slate-50"
+              }`;
+
+              const langBadge = lang === "python"
+                ? `<span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-emerald-600 text-white">🐍 Py</span>`
+                : `<span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-indigo-600 text-white">💻 SQL</span>`;
+
+              let tagColor = "bg-slate-100 text-slate-700";
+              if (item.step_tag && item.step_tag.includes("Step 1")) tagColor = "bg-emerald-100 text-emerald-800";
+              else if (item.step_tag && item.step_tag.includes("Step 2")) tagColor = "bg-amber-100 text-amber-800";
+              else if (item.step_tag && item.step_tag.includes("Step 3")) tagColor = "bg-rose-100 text-rose-800";
+              else if (item.step_tag && item.step_tag.includes("Step 4")) tagColor = "bg-purple-100 text-purple-800";
+
+              // 快速移動下拉選項
+              const folderOptionsHtml = allFolders
+                .map((f) => `<option value="${escapeHtml(f)}" ${f === folderName ? "selected" : ""}>移至: ${escapeHtml(f)}</option>`)
+                .join("");
+
+              cardDiv.innerHTML = `
+                <div class="flex items-center justify-between mb-1">
+                  <div class="flex items-center space-x-1 truncate flex-1">
+                    <span class="text-slate-400 font-mono text-[10px] cursor-grab" title="按住拖曳移動">⠿</span>
+                    ${langBadge}
+                    <span class="text-[9px] font-bold px-1.5 py-0.2 rounded ${tagColor} truncate max-w-[130px]">${escapeHtml(item.step_tag || "筆記")}</span>
+                  </div>
+                  <div class="flex items-center space-x-1 shrink-0 ml-1">
+                    <select class="text-[9px] bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 rounded px-1 py-0.5 focus:outline-none" title="快速移至其他資料夾">
+                      ${folderOptionsHtml}
+                    </select>
+                  </div>
+                </div>
+                <div class="text-xs font-bold text-slate-800 leading-snug mb-0.5 line-clamp-2">${escapeHtml(item.title)}</div>
+                <div class="text-[11px] text-slate-500 line-clamp-1">${escapeHtml((item.note || "").replace(/\n/g, " "))}</div>
+              `;
+              cardDiv.querySelector("select").onchange = (e) => moveNoteToFolder(item.id, e.target.value);
+              bodyDiv.appendChild(cardDiv);
+            });
+          }
+          folderDiv.appendChild(bodyDiv);
+        }
+
+        container.appendChild(folderDiv);
+      });
+    }
+
+    function selectNoteById(noteId, fromClick = false) {
+      const found = savedNotes.find((n) => n.id === noteId);
+      if (!found) return;
+      currentNoteId = found.id;
+      const lang = found.lang || "sql";
+      setEditorLanguage(lang);
+      cmEditor.setValue(found.sql || "");
+      document.getElementById("noteTitleInput").value = found.title || "";
+      document.getElementById("noteStepTagInput").value = found.step_tag || "自訂探索筆記";
+      document.getElementById("noteContentInput").value = found.note || "";
+
+      const currentF = found.folder || found.step_tag || "📁 未分類";
+      updateNoteFolderSelect(currentF);
+
+      renderNotesList();
+      runCurrentCode(found.chart_config || null);
+
+      // 若使用者點擊筆記卡片，且側邊欄未釘住（浮動彈出模式），則載入後自動收回！
+      if (fromClick && !isSidebarPinned && isSidebarFlyoutOpen) {
+        closeSidebarFlyout();
+      }
+    }
+
+    function createNewBlankNoteInFolder(folderName = "📁 未分類") {
+      currentNoteId = "note_" + Date.now();
+      const isPy = currentEditorLang === "python";
+      const newNote = {
+        id: currentNoteId,
+        lang: currentEditorLang,
+        title: isPy ? `[${currentTable}] 新 Python 探索筆記` : `[${currentTable}] 新 SQL 探索筆記`,
+        step_tag: folderName.includes("Step") ? folderName : "自訂探索筆記",
+        folder: folderName,
+        sql: isPy
+          ? `# 檢查 ${currentTable} 資料概況\nprint(df.isnull().sum())\ndf.describe().T.round(2)`
+          : `SELECT * FROM "${currentTable}" LIMIT 20;`,
+        note: "1. 分析目的：\n2. 觀察發現：\n3. 結論：",
+        chart_config: {}
+      };
+      savedNotes.push(newNote);
+      selectNoteById(currentNoteId);
+      saveNotesToServerQuietly();
+      showToast(`已在【${folderName}】建立新筆記`, "📝");
+    }
+
+    function createNewBlankNote() {
+      createNewBlankNoteInFolder(document.getElementById("noteFolderSelect")?.value || "📁 未分類");
+    }
+
+    async function saveCurrentNote(asNew = false) {
+      const title = document.getElementById("noteTitleInput").value.trim() || "未命名分析筆記";
+      const step_tag = document.getElementById("noteStepTagInput").value;
+      const folder = document.getElementById("noteFolderSelect").value || step_tag || "📁 未分類";
+      const sql = cmEditor.getValue();
+      const note = document.getElementById("noteContentInput").value;
+      const chart_config = {
+        type: document.getElementById("chartTypeSelect").value,
+        x_col: document.getElementById("chartXSelect").value,
+        y1_col: document.getElementById("chartY1Select").value,
+        y2_col: document.getElementById("chartY2Select").value
+      };
+
+      const noteObj = {
+        id: asNew || !currentNoteId ? "note_" + Date.now() : currentNoteId,
+        lang: currentEditorLang,
+        title,
+        step_tag,
+        folder,
+        sql,
+        note,
+        chart_config
+      };
+
+      if (asNew || !currentNoteId) {
+        currentNoteId = noteObj.id;
+        savedNotes.push(noteObj);
+      } else {
+        const idx = savedNotes.findIndex((n) => n.id === currentNoteId);
+        if (idx >= 0) savedNotes[idx] = noteObj;
+        else savedNotes.push(noteObj);
+      }
+
+      const res = await fetch("/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: currentTable, folder: currentFolder, notes: savedNotes })
+      });
+      const data = await res.json();
+      renderNotesList();
+      showStatus(data.message || "已儲存筆記！", false);
+      showToast(`已儲存筆記「${title}」！`, "💾");
+    }
+
+    async function deleteCurrentNote() {
+      if (!currentNoteId) return;
+      if (!confirm("確定要刪除這條分析筆記嗎？")) return;
+      savedNotes = savedNotes.filter((n) => n.id !== currentNoteId);
+      currentNoteId = savedNotes.length > 0 ? savedNotes[0].id : null;
+      await fetch("/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: currentTable, folder: currentFolder, notes: savedNotes })
+      });
+      renderNotesList();
+      if (currentNoteId) selectNoteById(currentNoteId);
+      showToast("已刪除該條筆記", "🗑️");
+    }
+
+    async function regenerateProjectTemplates() {
+      const targetCol = document.getElementById("targetColSelector").value;
+      const res = await fetch("/api/reset_default_notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: currentTable, folder: currentFolder, target_col: targetCol })
+      });
+      const data = await res.json();
+      savedNotes = data.notes || [];
+      renderNotesList();
+      if (savedNotes.length > 0) selectNoteById(savedNotes[0].id);
+      showStatus(data.message || "已重新產生專屬分析範本", false);
+      showToast("已重新生成專案範本程式", "🪄");
+    }
+
+    async function runCurrentCode(preferredChartConfig = null) {
+      if (currentEditorLang === "python") {
+        await runPythonCode();
+      } else {
+        await runSqlQuery(preferredChartConfig);
+      }
+    }
+
+    async function runSqlQuery(preferredChartConfig = null) {
+      if (!currentTable) {
+        showStatus("⚠️ 目前專案資料夾尚無資料表，請先點右上角「➕ 匯入數據」上傳 CSV 或 Excel！", true);
+        return;
+      }
+      const sql = cmEditor.getValue().trim();
+      if (!sql) return;
+
+      showStatus("⏳ 正在執行 SQL 查詢...", false);
+      const t0 = performance.now();
+
+      try {
+        const res = await fetch("/api/query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sql, table: currentTable, folder: currentFolder })
+        });
+        const contentType = res.headers.get("content-type") || "";
+        let data;
+        if (contentType.includes("application/json")) {
+          data = await res.json();
+        } else {
+          const errText = await res.text();
+          throw new Error(`後端回應非 JSON 格式 (${res.status}): ${errText.slice(0, 100)}...`);
+        }
+        const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
+
+        if (!res.ok || data.error) {
+          showStatus(`❌ ${data.error || "查詢失敗"}`, true);
+          return;
+        }
+
+        lastQueryResult = data;
+        showStatus(`✅ SQL 執行成功：共 ${data.total_rows} 筆結果（耗時 ${elapsed} 秒）`, false);
+        document.getElementById("tableRowCountBadge").textContent = data.total_rows;
+
+        renderResultTable(data);
+        populateChartAxisSelectors(data, preferredChartConfig);
+        renderQueryChart();
+      } catch (err) {
+        showStatus(`❌ 錯誤: ${err.message}`, true);
+      }
+    }
+
+    async function runPythonCode() {
+      if (!currentTable) {
+        showStatus("⚠️ 目前專案資料夾尚無資料表，請先點右上角「➕ 匯入數據」上傳 CSV 或 Excel！", true);
+        return;
+      }
+      const code = cmEditor.getValue().trim();
+      if (!code) return;
+
+      showStatus(`🐍 正在對專案 [${currentFolder}/${currentTable}] 執行 Python 分析...`, false);
+      const t0 = performance.now();
+
+      const pyConsole = document.getElementById("pyConsoleWrapper");
+      const pyPlotWrapper = document.getElementById("pyPlotWrapper");
+      const pyPlotImg = document.getElementById("pyPlotImage");
+      const pyPlotDownload = document.getElementById("pyPlotDownloadLink");
+
+      try {
+        const res = await fetch("/api/run_python", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code, table: currentTable, folder: currentFolder })
+        });
+        const contentType = res.headers.get("content-type") || "";
+        let data;
+        if (contentType.includes("application/json")) {
+          data = await res.json();
+        } else {
+          const errText = await res.text();
+          throw new Error(`後端回應非 JSON 格式 (${res.status}): ${errText.slice(0, 100)}...`);
+        }
+        const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
+
+        if (!res.ok || data.error) {
+          showStatus(`❌ Python 執行錯誤（請看左下方輸出區）`, true);
+          pyPlotWrapper.classList.add("hidden");
+          pyConsole.className = "bg-slate-900 text-rose-400 rounded-xl p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap overflow-x-auto border border-rose-700";
+          pyConsole.textContent = (data.stdout ? data.stdout + "\n" : "") + (data.traceback || data.error);
+          return;
+        }
+
+        showStatus(`✅ Python 執行完成（耗時 ${elapsed} 秒）`, false);
+
+        if (data.plot_image) {
+          pyPlotImg.src = data.plot_image;
+          pyPlotDownload.href = data.plot_image;
+          pyPlotWrapper.classList.remove("hidden");
+        } else {
+          pyPlotWrapper.classList.add("hidden");
+        }
+
+        pyConsole.className = "bg-slate-900 text-emerald-300 rounded-xl p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap overflow-x-auto border border-slate-700 shadow-inner";
+        pyConsole.textContent = data.stdout || "(無 print 文字輸出)";
+
+        if (data.table_data) {
+          lastQueryResult = data.table_data;
+          document.getElementById("tableRowCountBadge").textContent = data.table_data.total_rows;
+          renderResultTable(data.table_data);
+        }
+      } catch (err) {
+        showStatus(`❌ 系統錯誤: ${err.message}`, true);
+      }
+    }
+
+    function showStatus(msg, isError) {
+      const el = document.getElementById("queryStatusText");
+      el.textContent = msg;
+      el.className = isError
+        ? "text-xs text-rose-400 font-bold truncate"
+        : "text-xs text-emerald-400 font-semibold truncate";
+    }
+
+    function renderResultTable(data) {
+      const thead = document.getElementById("resultTableHead");
+      const tbody = document.getElementById("resultTableBody");
+      const statsBar = document.getElementById("quickStatsBar");
+
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+
+      if (!data.columns || data.columns.length === 0) {
+        statsBar.innerHTML = "<span>無欄位資料</span>";
+        return;
+      }
+
+      const statKeys = Object.keys(data.col_stats || {});
+      if (statKeys.length > 0) {
+        statsBar.innerHTML = statKeys
+          .slice(0, 6)
+          .map((col) => {
+            const st = data.col_stats[col];
+            return `<span class="bg-white border border-slate-200 px-2 py-0.5 rounded whitespace-nowrap">
+              <strong class="text-indigo-700">${escapeHtml(formatColLabel(col))}</strong>: 平均 <b>${st.mean}</b> (${st.min} ~ ${st.max})
+            </span>`;
+          })
+          .join("");
+      } else {
+        statsBar.innerHTML = "<span>表格預覽</span>";
+      }
+
+      const trHead = document.createElement("tr");
+      data.columns.forEach((col) => {
+        const th = document.createElement("th");
+        th.className = "px-3 py-2 font-bold border-b border-slate-200 whitespace-nowrap";
+        th.textContent = formatColLabel(col);
+        trHead.appendChild(th);
+      });
+      thead.appendChild(trHead);
+
+      data.rows.forEach((row, rIdx) => {
+        const tr = document.createElement("tr");
+        tr.className = rIdx % 2 === 0 ? "bg-white hover:bg-indigo-50/40" : "bg-slate-50/60 hover:bg-indigo-50/40";
+        data.columns.forEach((col) => {
+          const td = document.createElement("td");
+          td.className = "px-3 py-1.5 whitespace-nowrap text-slate-700 font-mono";
+          let val = row[col];
+          if (typeof val === "number" && !Number.isInteger(val)) {
+            val = Number(val.toFixed(4));
+          }
+          td.textContent = val !== null && val !== undefined ? val : "NULL";
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
+    function populateChartAxisSelectors(data, preferredConfig) {
+      const cols = data.columns || [];
+      const xSel = document.getElementById("chartXSelect");
+      const y1Sel = document.getElementById("chartY1Select");
+      const y2Sel = document.getElementById("chartY2Select");
+      const typeSel = document.getElementById("chartTypeSelect");
+
+      xSel.innerHTML = "";
+      y1Sel.innerHTML = "";
+      y2Sel.innerHTML = '<option value="">(無)</option>';
+
+      cols.forEach((c) => {
+        const disp = formatColLabel(c);
+        xSel.add(new Option(disp, c));
+        y1Sel.add(new Option(disp, c));
+        y2Sel.add(new Option(disp, c));
+      });
+
+      if (preferredConfig && preferredConfig.x_col && cols.includes(preferredConfig.x_col)) {
+        if (preferredConfig.type) typeSel.value = preferredConfig.type;
+        xSel.value = preferredConfig.x_col;
+        if (preferredConfig.y1_col && cols.includes(preferredConfig.y1_col)) {
+          y1Sel.value = preferredConfig.y1_col;
+        }
+        if (preferredConfig.y2_col && cols.includes(preferredConfig.y2_col)) {
+          y2Sel.value = preferredConfig.y2_col;
+        } else {
+          y2Sel.value = "";
+        }
+      } else {
+        if (cols.length >= 2) {
+          xSel.value = cols[0];
+          y1Sel.value = cols[cols.length - 1];
+          if (cols.length >= 3) {
+            y2Sel.value = cols[1];
+            typeSel.value = "bar_line";
+          } else {
+            y2Sel.value = "";
+            typeSel.value = "bar";
+          }
+        } else if (cols.length === 1) {
+          xSel.value = cols[0];
+          y1Sel.value = cols[0];
+        }
+      }
+    }
+
+    function renderQueryChart() {
+      if (!lastQueryResult || !lastQueryResult.rows || lastQueryResult.rows.length === 0) return;
+
+      const chartType = document.getElementById("chartTypeSelect").value;
+      const xCol = document.getElementById("chartXSelect").value;
+      const y1Col = document.getElementById("chartY1Select").value;
+      const y2Col = document.getElementById("chartY2Select").value;
+      const xLabel = formatColLabel(xCol);
+      const y1Label = formatColLabel(y1Col);
+      const y2Label = y2Col ? formatColLabel(y2Col) : "";
+
+      const hintEl = document.getElementById("chartHintText");
+      if (chartType === "bar_line") {
+        hintEl.textContent = "💡 【雙軸圖讀圖技巧】：紅線看「比率/平均趨勢（左軸）」，藍柱看「樣本筆數（右軸）」。紅線突然跳升處就是分界線！";
+      } else {
+        hintEl.textContent = `💡 目前繪製：X 軸 = ${xLabel}，Y1 軸 = ${y1Label}` + (y2Label ? `，Y2 軸 = ${y2Label}` : "");
+      }
+
+      const rows = lastQueryResult.rows.slice(0, 200);
+      const labels = rows.map((r) => String(r[xCol] ?? ""));
+      const y1Data = rows.map((r) => Number(r[y1Col]) || 0);
+      const y2Data = y2Col ? rows.map((r) => Number(r[y2Col]) || 0) : [];
+
+      const ctx = document.getElementById("queryResultChart").getContext("2d");
+      if (mainChartInstance) mainChartInstance.destroy();
+
+      if (chartType === "pie") {
+        mainChartInstance = new Chart(ctx, {
+          type: "doughnut",
+          data: {
+            labels,
+            datasets: [{ label: y1Label, data: y1Data, backgroundColor: ["#2563eb", "#e11d48", "#059669", "#d97706", "#7c3aed", "#0891b2"] }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "right" } } }
+        });
+        return;
+      }
+
+      if (chartType === "scatter") {
+        mainChartInstance = new Chart(ctx, {
+          type: "scatter",
+          data: {
+            datasets: [{ label: `${xLabel} vs ${y1Label}`, data: rows.map((r) => ({ x: Number(r[xCol]) || 0, y: Number(r[y1Col]) || 0 })), backgroundColor: "rgba(225, 29, 72, 0.65)" }]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+        return;
+      }
+
+      if (chartType === "bar_line") {
+        const datasets = [
+          {
+            type: "line",
+            label: `${y1Label} (左軸)`,
+            data: y1Data,
+            borderColor: "#e11d48",
+            backgroundColor: "rgba(225, 29, 72, 0.15)",
+            borderWidth: 3,
+            pointRadius: 4,
+            pointBackgroundColor: "#e11d48",
+            yAxisID: "y",
+            tension: 0.15,
+            order: 1
+          }
+        ];
+        if (y2Col) {
+          datasets.push({
+            type: "bar",
+            label: `${y2Label} (右軸)`,
+            data: y2Data,
+            backgroundColor: "rgba(56, 189, 248, 0.45)",
+            borderColor: "rgba(2, 132, 199, 0.8)",
+            borderWidth: 1,
+            yAxisID: "y1",
+            order: 2
+          });
+        }
+        mainChartInstance = new Chart(ctx, {
+          data: { labels, datasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            scales: {
+              x: { title: { display: true, text: xLabel } },
+              y: { type: "linear", display: true, position: "left", title: { display: true, text: y1Label, color: "#e11d48" } },
+              y1: { type: "linear", display: Boolean(y2Col), position: "right", grid: { drawOnChartArea: false }, title: { display: Boolean(y2Col), text: y2Label, color: "#0284c7" } }
+            }
+          }
+        });
+        return;
+      }
+
+      const baseType = chartType === "line" ? "line" : "bar";
+      const datasets = [{ label: y1Label, data: y1Data, backgroundColor: "rgba(79, 70, 229, 0.8)", borderColor: "#4f46e5", borderWidth: 2 }];
+      if (y2Col && (chartType === "grouped_bar" || chartType === "line")) {
+        datasets.push({ label: y2Label, data: y2Data, backgroundColor: "rgba(225, 29, 72, 0.8)", borderColor: "#e11d48", borderWidth: 2 });
+      }
+      mainChartInstance = new Chart(ctx, {
+        type: baseType,
+        data: { labels, datasets },
+        options: { responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false } }
+      });
+    }
+
+    function downloadChartImage() {
+      if (!mainChartInstance) return;
+      const link = document.createElement("a");
+      link.download = `chart_${currentTable}_${Date.now()}.png`;
+      link.href = mainChartInstance.toBase64Image();
+      link.click();
+    }
+
+    async function openHealthCheckModal() {
+      const modal = document.getElementById("healthCheckModal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+
+      const targetCol = document.getElementById("targetColSelector").value;
+      const res = await fetch("/api/health_check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: currentTable, target_col: targetCol })
+      });
+      const data = await res.json();
+      if (data.error) return;
+
+      const cardsEl = document.getElementById("hcSummaryCards");
+      const keyFeatures = (data.correlations || []).filter((c) => c.is_key);
+      cardsEl.innerHTML = `
+        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+          <div class="text-xs text-slate-500">目前專案 / 總筆數</div>
+          <div class="text-lg font-extrabold text-slate-800 mt-1">${escapeHtml(data.table)} (${data.row_count} 筆)</div>
+        </div>
+        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+          <div class="text-xs text-slate-500">缺失值 / 重複筆數</div>
+          <div class="text-lg font-extrabold text-emerald-600 mt-1">${data.total_missing} 缺失 / ${data.duplicate_rows} 重複</div>
+        </div>
+        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+          <div class="text-xs text-slate-500">目前主角 (目標欄位 Y)</div>
+          <div class="text-lg font-extrabold text-rose-600 mt-1">${escapeHtml(formatColLabel(data.target_col))}</div>
+        </div>
+        <div class="p-3.5 rounded-xl bg-rose-50 border border-rose-200">
+          <div class="text-xs text-rose-700 font-semibold">發現顯著關鍵特徵 (|r| ≥ 0.1)</div>
+          <div class="text-lg font-extrabold text-rose-700 mt-1">${keyFeatures.length} 個關鍵欄位</div>
+        </div>
+      `;
+
+      const ctx1 = document.getElementById("hcTargetChart").getContext("2d");
+      if (hcTargetChartInstance) hcTargetChartInstance.destroy();
+      hcTargetChartInstance = new Chart(ctx1, {
+        type: "bar",
+        data: {
+          labels: data.target_distribution.map((d) => `${formatColLabel(data.target_col)}=${d.value} (${d.pct}%)`),
+          datasets: [{ label: "筆數", data: data.target_distribution.map((d) => d.count), backgroundColor: ["#0284c7", "#e11d48", "#059669", "#d97706"] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+
+      const ctx2 = document.getElementById("hcCorrChart").getContext("2d");
+      if (hcCorrChartInstance) hcCorrChartInstance.destroy();
+      const corrs = data.correlations || [];
+      hcCorrChartInstance = new Chart(ctx2, {
+        type: "bar",
+        data: {
+          labels: corrs.map((c) => formatColLabel(c.column)),
+          datasets: [{ label: `與 ${formatColLabel(data.target_col)} 的相關係數 (r)`, data: corrs.map((c) => c.correlation), backgroundColor: corrs.map((c) => (c.is_key ? "#e11d48" : "#94a3b8")) }]
+        },
+        options: { indexAxis: "y", responsive: true, maintainAspectRatio: false }
+      });
+
+      const btnContainer = document.getElementById("hcKeyFeatureButtons");
+      btnContainer.innerHTML = `<span class="text-xs font-bold text-slate-700 self-center mr-1">🚀 點擊一鍵探索關鍵特徵分界線：</span>`;
+      keyFeatures.forEach((kf) => {
+        const btn = document.createElement("button");
+        btn.className = "text-xs bg-rose-600 hover:bg-rose-500 text-white font-bold px-3 py-1 rounded-lg shadow-sm transition";
+        btn.textContent = `🎯 探索 ${formatColLabel(kf.column)} (r=${kf.correlation > 0 ? "+" : ""}${kf.correlation})`;
+        btn.onclick = () => {
+          closeHealthCheckModal();
+          autoExploreColumn(kf.column, "vs_target");
+        };
+        btnContainer.appendChild(btn);
+      });
+    }
+
+    function closeHealthCheckModal() {
+      document.getElementById("healthCheckModal").classList.add("hidden");
+      document.getElementById("healthCheckModal").classList.remove("flex");
+    }
+
+    // Bilingual Column Dictionary Modal Functions (Multi-Table Aware)
+    function openColDictModal(targetTable = null) {
+      colDictEditingTable = targetTable || currentTable;
+      const modal = document.getElementById("colDictModal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+      document.getElementById("colDictModalTableTitle").textContent = colDictEditingTable;
+      document.getElementById("colDictStatusMsg").textContent = "";
+
+      // Render Table Switcher Tabs inside #colDictModal
+      const tabsContainer = document.getElementById("colDictTableTabs");
+      if (tabsContainer) {
+        tabsContainer.innerHTML = "";
+        Object.keys(allTablesMeta).forEach((tName) => {
+          const btn = document.createElement("button");
+          btn.onclick = () => openColDictModal(tName);
+          btn.className = tName === colDictEditingTable
+            ? "px-3 py-1 rounded-lg bg-sky-600 text-white text-xs font-extrabold shadow-sm"
+            : "px-3 py-1 rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-sky-50 text-xs font-semibold";
+          btn.textContent = `📂 ${tName} (${allTablesMeta[tName].col_count}欄)`;
+          tabsContainer.appendChild(btn);
+        });
+      }
+
+      const meta = allTablesMeta[colDictEditingTable];
+      const tbody = document.getElementById("colDictEditorBody");
+      tbody.innerHTML = "";
+      if (!meta || !meta.columns) return;
+
+      meta.columns.forEach((c) => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-50";
+        tr.innerHTML = `
+          <td class="px-3 py-1.5 font-mono font-bold text-slate-800">${escapeHtml(c.name)}</td>
+          <td class="px-3 py-1.5">
+            <input type="text" data-col-zh="${escapeHtml(c.name)}" value="${escapeHtml(c.zh || "")}" placeholder="輸入中文名稱..." class="w-full border border-slate-300 rounded px-2 py-1 text-xs font-semibold text-sky-800 focus:border-sky-500 focus:outline-none" />
+          </td>
+          <td class="px-3 py-1.5">
+            <input type="text" data-col-purpose="${escapeHtml(c.name)}" value="${escapeHtml(c.purpose || "")}" placeholder="輸入分析用途（例如：衡量品質、了解產量規模）..." class="w-full border border-slate-300 rounded px-2 py-1 text-xs text-slate-700 focus:border-sky-500 focus:outline-none" />
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function closeColDictModal() {
+      document.getElementById("colDictModal").classList.add("hidden");
+      document.getElementById("colDictModal").classList.remove("flex");
+    }
+
+    function parsePastedColDict() {
+      const raw = document.getElementById("colDictPasteInput").value.trim();
+      if (!raw) {
+        document.getElementById("colDictStatusMsg").textContent = "⚠️ 請先在上方輸入框貼上對照表內容！";
+        return;
+      }
+
+      const lines = raw.split(/\r?\n/);
+      let matchCount = 0;
+
+      lines.forEach((line) => {
+        let trimmed = line.trim();
+        if (!trimmed) return;
+        // Skip markdown separator rows like |---|---|---|
+        if (/^[\|\-\s:]+$/.test(trimmed)) return;
+
+        let parts = [];
+        if (trimmed.includes("|")) {
+          parts = trimmed
+            .replace(/^\|/, "")
+            .replace(/\|$/, "")
+            .split("|")
+            .map((s) => s.trim());
+        } else if (trimmed.includes("\t")) {
+          parts = trimmed.split("\t").map((s) => s.trim());
+        } else {
+          parts = trimmed.split(",").map((s) => s.trim());
+        }
+
+        if (parts.length >= 2) {
+          const colKey = parts[0];
+          const zhVal = parts[1];
+          const purposeVal = parts.length >= 3 ? parts[2] : "";
+
+          const zhInput = Array.from(document.querySelectorAll("input[data-col-zh]")).find((el) => el.dataset.colZh === colKey);
+          const purposeInput = Array.from(document.querySelectorAll("input[data-col-purpose]")).find((el) => el.dataset.colPurpose === colKey);
+          if (zhInput) {
+            zhInput.value = zhVal;
+            if (purposeInput && purposeVal) purposeInput.value = purposeVal;
+            matchCount++;
+          }
+        }
+      });
+
+      document.getElementById("colDictStatusMsg").textContent = `✅ 已自動解析並對應填入 ${matchCount} 個欄位！請點右下角「💾 儲存中英欄位設定」。`;
+    }
+
+    async function saveColDictFromModal() {
+      const targetT = colDictEditingTable || currentTable;
+      const meta = allTablesMeta[targetT];
+      if (!meta || !meta.columns) return;
+
+      const newDict = {};
+      meta.columns.forEach((c) => {
+        const zhInput = Array.from(document.querySelectorAll("input[data-col-zh]")).find((el) => el.dataset.colZh === c.name);
+        const purposeInput = Array.from(document.querySelectorAll("input[data-col-purpose]")).find((el) => el.dataset.colPurpose === c.name);
+        const zh = zhInput ? zhInput.value.trim() : "";
+        const purpose = purposeInput ? purposeInput.value.trim() : "";
+        if (zh || purpose) {
+          newDict[c.name] = { zh, purpose };
+        }
+      });
+
+      const res = await fetch("/api/col_dict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table: targetT, col_dict: newDict })
+      });
+      const data = await res.json();
+      await loadTablesMeta();
+      onColLabelModeChange(colLabelMode);
+      document.getElementById("colDictStatusMsg").textContent = `✅ ${data.message || "已儲存！"}`;
+    }
+
+    // Full-Screen Plot Zoom Lightbox Functions
+    function openPlotZoomModal(imgSrc) {
+      if (!imgSrc) return;
+      const modal = document.getElementById("plotZoomModal");
+      const imgEl = document.getElementById("plotZoomModalImg");
+      const dlBtn = document.getElementById("zoomModalDownloadBtn");
+
+      imgEl.src = imgSrc;
+      dlBtn.href = imgSrc;
+      resetPlotZoom();
+
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closePlotZoomModal() {
+      const modal = document.getElementById("plotZoomModal");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function adjustPlotZoom(delta) {
+      currentZoomScale = Math.max(50, Math.min(300, currentZoomScale + delta));
+      const imgEl = document.getElementById("plotZoomModalImg");
+      document.getElementById("plotZoomScaleText").textContent = `${currentZoomScale}%`;
+      if (currentZoomScale === 100) {
+        imgEl.style.maxWidth = "100%";
+        imgEl.style.maxHeight = "82vh";
+        imgEl.style.width = "auto";
+      } else {
+        imgEl.style.maxWidth = "none";
+        imgEl.style.maxHeight = "none";
+        imgEl.style.width = `${currentZoomScale}%`;
+      }
+    }
+
+    function resetPlotZoom() {
+      currentZoomScale = 100;
+      const imgEl = document.getElementById("plotZoomModalImg");
+      document.getElementById("plotZoomScaleText").textContent = "100%";
+      imgEl.style.maxWidth = "100%";
+      imgEl.style.maxHeight = "82vh";
+      imgEl.style.width = "auto";
+    }
+
+    function openZoomedPlotInNewTab() {
+      const imgSrc = document.getElementById("plotZoomModalImg").src;
+      if (!imgSrc) return;
+      // Convert base64 data URL to Blob URL so Chrome/Edge does not block window.open
+      if (imgSrc.startsWith("data:")) {
+        const parts = imgSrc.split(",");
+        const mime = parts[0].match(/:(.*?);/)[1];
+        const bstr = atob(parts[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, "_blank");
+      } else {
+        window.open(imgSrc, "_blank");
+      }
+    }
+
+    function zoomCurrentSqlChart() {
+      if (!mainChartInstance) return;
+      const base64Img = mainChartInstance.toBase64Image();
+      openPlotZoomModal(base64Img);
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closePlotZoomModal();
+      }
+    });
+
+    function openGuideModal() {
+      document.getElementById("guideModal").classList.remove("hidden");
+      document.getElementById("guideModal").classList.add("flex");
+    }
+    function closeGuideModal() {
+      document.getElementById("guideModal").classList.add("hidden");
+      document.getElementById("guideModal").classList.remove("flex");
+    }
+    function openUploadModal() {
+      document.getElementById("uploadModal").classList.remove("hidden");
+      document.getElementById("uploadModal").classList.add("flex");
+      document.getElementById("uploadStatusMsg").textContent = "";
+      const folderInput = document.getElementById("uploadFolderInput");
+      if (folderInput) {
+        folderInput.value = currentFolder || "01_Manufacturing_Quality_ERP";
+      }
+    }
+    function closeUploadModal() {
+      document.getElementById("uploadModal").classList.add("hidden");
+      document.getElementById("uploadModal").classList.remove("flex");
+    }
+
+    function onCsvFilesSelected() {
+      const fileInput = document.getElementById("csvFileInput");
+      const previewEl = document.getElementById("selectedFilesPreview");
+      if (!fileInput.files || fileInput.files.length === 0) {
+        previewEl.textContent = "";
+        return;
+      }
+      const names = Array.from(fileInput.files).map((f) => f.name);
+      previewEl.textContent = `已選取 ${names.length} 個檔案：${names.join(", ")}`;
+    }
+
+    async function submitCsvUpload() {
+      const fileInput = document.getElementById("csvFileInput");
+      const tableName = document.getElementById("customTableNameInput").value.trim();
+      const folderName = document.getElementById("uploadFolderInput").value.trim();
+      const modeRadio = document.querySelector('input[name="csvImportMode"]:checked');
+      const importMode = modeRadio ? modeRadio.value : "separate";
+      const msgEl = document.getElementById("uploadStatusMsg");
+
+      if (!fileInput.files || fileInput.files.length === 0) {
+        msgEl.textContent = "請先選擇至少一個檔案！";
+        return;
+      }
+
+      const formData = new FormData();
+      Array.from(fileInput.files).forEach((f) => formData.append("files", f));
+      formData.append("table_name", tableName);
+      formData.append("project_folder", folderName);
+      formData.append("import_mode", importMode);
+
+      msgEl.textContent = "⏳ 正在匯入至專屬資料夾並自動生成 SQL + Python 程式碼...";
+      const res = await fetch("/api/upload_csv", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        msgEl.textContent = `❌ ${data.error || "匯入失敗"}`;
+        return;
+      }
+
+      if (data.project_folder) {
+        currentFolder = data.project_folder;
+      }
+      currentTable = data.table_name;
+      await loadTablesMeta();
+      await onProjectSwitch(currentTable);
+      closeUploadModal();
+      showStatus(data.message, false);
+    }
+
+    // Multi-Table Join & Union Modal Functions
+    function openJoinModal() {
+      const modal = document.getElementById("joinModal");
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+      document.getElementById("joinModalStatusMsg").textContent = "";
+
+      const tableNames = getTablesInCurrentFolder();
+      const leftSel = document.getElementById("joinLeftTable");
+      const rightSel = document.getElementById("joinRightTable");
+      leftSel.innerHTML = "";
+      rightSel.innerHTML = "";
+
+      tableNames.forEach((t, idx) => {
+        const optL = document.createElement("option");
+        optL.value = t;
+        optL.textContent = `${t} (${allTablesMeta[t].row_count} 筆)`;
+        if (t === currentTable) optL.selected = true;
+        leftSel.appendChild(optL);
+
+        const optR = document.createElement("option");
+        optR.value = t;
+        optR.textContent = `${t} (${allTablesMeta[t].row_count} 筆)`;
+        if (t !== currentTable && idx === 1) optR.selected = true;
+        rightSel.appendChild(optR);
+      });
+
+      // Populate Union checklist
+      const checklist = document.getElementById("unionTablesChecklist");
+      checklist.innerHTML = "";
+      tableNames.forEach((t) => {
+        const label = document.createElement("label");
+        label.className = "flex items-center space-x-2 p-1.5 rounded hover:bg-slate-50 cursor-pointer border border-slate-100";
+        label.innerHTML = `
+          <input type="checkbox" class="union-table-checkbox text-indigo-600" value="${escapeHtml(t)}" checked />
+          <span class="font-mono font-bold text-slate-800 truncate">${escapeHtml(t)}</span>
+          <span class="text-[10px] text-slate-400">(${allTablesMeta[t].row_count}筆)</span>
+        `;
+        checklist.appendChild(label);
+      });
+
+      onJoinTablesChange();
+    }
+
+    function closeJoinModal() {
+      document.getElementById("joinModal").classList.add("hidden");
+      document.getElementById("joinModal").classList.remove("flex");
+    }
+
+    function onJoinTablesChange() {
+      const leftT = document.getElementById("joinLeftTable").value;
+      const rightT = document.getElementById("joinRightTable").value;
+      const leftKeySel = document.getElementById("joinLeftKey");
+      const rightKeySel = document.getElementById("joinRightKey");
+      const hintEl = document.getElementById("sharedKeysHint");
+
+      const leftCols = (allTablesMeta[leftT] && allTablesMeta[leftT].columns) ? allTablesMeta[leftT].columns.map((c) => c.name) : [];
+      const rightCols = (allTablesMeta[rightT] && allTablesMeta[rightT].columns) ? allTablesMeta[rightT].columns.map((c) => c.name) : [];
+
+      const shared = leftCols.filter((c) => rightCols.includes(c));
+      if (shared.length > 0) {
+        hintEl.textContent = `✨ 自動偵測到共同欄位：${shared.slice(0, 3).join(", ")}${shared.length > 3 ? "..." : ""}`;
+      } else {
+        hintEl.textContent = "💡 請選擇兩表要對齊的鍵值欄位";
+      }
+
+      leftKeySel.innerHTML = "";
+      leftCols.forEach((c) => {
+        const opt = document.createElement("option");
+        opt.value = c;
+        opt.textContent = formatColLabel(c);
+        if (shared.length > 0 && c === shared[0]) opt.selected = true;
+        leftKeySel.appendChild(opt);
+      });
+
+      rightKeySel.innerHTML = "";
+      rightCols.forEach((c) => {
+        const opt = document.createElement("option");
+        opt.value = c;
+        opt.textContent = formatColLabel(c);
+        if (shared.length > 0 && c === shared[0]) opt.selected = true;
+        rightKeySel.appendChild(opt);
+      });
+
+      document.getElementById("joinNewTableName").placeholder = `${leftT}_${rightT}_joined`;
+    }
+
+    function generateJoinSqlPreview() {
+      const leftT = document.getElementById("joinLeftTable").value;
+      const rightT = document.getElementById("joinRightTable").value;
+      const leftK = document.getElementById("joinLeftKey").value;
+      const rightK = document.getElementById("joinRightKey").value;
+      const how = document.getElementById("joinHowSelect").value;
+      const sqlJoin = how === "inner" ? "INNER JOIN" : "LEFT JOIN";
+
+      const sql = `-- 🔗 多表橫向關聯查詢 (${leftT} ${sqlJoin} ${rightT})\nSELECT \n    a.*,\n    b.*\nFROM "${leftT}" AS a\n${sqlJoin} "${rightT}" AS b\n    ON a."${leftK}" = b."${rightK}"\nLIMIT 50;`;
+
+      closeJoinModal();
+      setEditorLanguage("sql");
+      currentNoteId = null;
+      cmEditor.setValue(sql);
+      document.getElementById("noteTitleInput").value = `【多表 JOIN】${leftT} 關聯 ${rightT} (依 ${leftK})`;
+      document.getElementById("noteStepTagInput").value = "Step 1: 體檢與看主角 (Target)";
+      document.getElementById("noteContentInput").value = `💡 透過 ${leftK} = ${rightK} 將「${leftT}」與「${rightT}」橫向串聯對齊。`;
+      runCurrentCode();
+    }
+
+    function generateJoinPyPreview() {
+      const leftT = document.getElementById("joinLeftTable").value;
+      const rightT = document.getElementById("joinRightTable").value;
+      const leftK = document.getElementById("joinLeftKey").value;
+      const rightK = document.getElementById("joinRightKey").value;
+      const how = document.getElementById("joinHowSelect").value;
+
+      const py = `# 🐍 使用 Python pd.merge 將兩張表左右關聯\ndf_left = tables['${leftT}']\ndf_right = tables['${rightT}']\n\nmerged_df = pd.merge(\n    df_left,\n    df_right,\n    left_on='${leftK}',\n    right_on='${rightK}',\n    how='${how}',\n    suffixes=('', '_${rightT}')\n)\n\nprint(f"合併完成！左表 {len(df_left)} 筆 + 右表 {len(df_right)} 筆 -> 合併後 {len(merged_df)} 筆、共 {merged_df.shape[1]} 個欄位")\nmerged_df.head(30)`;
+
+      closeJoinModal();
+      setEditorLanguage("python");
+      currentNoteId = null;
+      cmEditor.setValue(py);
+      document.getElementById("noteTitleInput").value = `【Python 多表合併】pd.merge(${leftT}, ${rightT})`;
+      document.getElementById("noteStepTagInput").value = "Step 1: 體檢與看主角 (Target)";
+      document.getElementById("noteContentInput").value = `💡 使用 tables['${leftT}'] 與 tables['${rightT}'] 取出兩張 DataFrame 並執行 pd.merge。`;
+      runCurrentCode();
+    }
+
+    async function executeCombineJoin() {
+      const leftT = document.getElementById("joinLeftTable").value;
+      const rightT = document.getElementById("joinRightTable").value;
+      const leftK = document.getElementById("joinLeftKey").value;
+      const rightK = document.getElementById("joinRightKey").value;
+      const how = document.getElementById("joinHowSelect").value;
+      const newName = document.getElementById("joinNewTableName").value.trim() || `${leftT}_${rightT}_joined`;
+      const statusEl = document.getElementById("joinModalStatusMsg");
+
+      statusEl.textContent = "⏳ 正在合併資料表並建立專屬專案程式碼...";
+      const res = await fetch("/api/combine_tables", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "join",
+          left_table: leftT,
+          right_table: rightT,
+          left_key: leftK,
+          right_key: rightK,
+          join_how: how,
+          new_table_name: newName
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        statusEl.textContent = `❌ ${data.error || "合併失敗"}`;
+        return;
+      }
+
+      currentTable = data.table_name;
+      await loadTablesMeta();
+      await onProjectSwitch(currentTable);
+      closeJoinModal();
+      showStatus(data.message, false);
+    }
+
+    async function executeCombineUnion() {
+      const checked = Array.from(document.querySelectorAll(".union-table-checkbox:checked")).map((el) => el.value);
+      const newName = document.getElementById("unionNewTableName").value.trim() || "combined_union";
+      const statusEl = document.getElementById("joinModalStatusMsg");
+
+      if (checked.length < 2) {
+        statusEl.textContent = "⚠️ 請至少勾選 2 張資料表進行上下疊加！";
+        return;
+      }
+
+      statusEl.textContent = "⏳ 正在上下疊加資料表並建立專屬專案程式碼...";
+      const res = await fetch("/api/combine_tables", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "union",
+          tables: checked,
+          new_table_name: newName
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        statusEl.textContent = `❌ ${data.error || "疊加失敗"}`;
+        return;
+      }
+
+      currentTable = data.table_name;
+      await loadTablesMeta();
+      await onProjectSwitch(currentTable);
+      closeJoinModal();
+      showStatus(data.message, false);
+    }
+
+    function exportReportMarkdown() {
+      let md = `# 📊 [${currentTable}] SQL + Python 數據探索與分析筆記報告\n\n`;
+      md += `- **匯出時間**：${new Date().toLocaleString()}\n`;
+      md += `- **專案資料表**：\`${currentTable}\`\n\n---\n\n`;
+
+      savedNotes.forEach((n, idx) => {
+        const lang = n.lang === "python" ? "python" : "sql";
+        md += `## ${idx + 1}. [${lang.toUpperCase()}] ${n.title}\n`;
+        md += `- **分析階段**：\`${n.step_tag || "未分類"}\`\n\n`;
+        md += `### 💻 程式碼\n\`\`\`${lang}\n${n.sql}\n\`\`\`\n\n`;
+        md += `### 📝 分析師觀察與結論\n${n.note || "(無註解)"}\n\n---\n\n`;
+      });
+
+      const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${currentTable}_分析筆記報告_${new Date().toISOString().slice(0, 10)}.md`;
+      link.click();
+    }
+  </script>
+</body>
+</html>

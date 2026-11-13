@@ -1,0 +1,909 @@
+{
+  "olist_customers_dataset": [
+    {
+      "id": "olist_customers_dataset_sql_step1",
+      "lang": "sql",
+      "title": "【Step 1 看主角】檢查 customer_state 的分佈與比例",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "sql": "-- [自動為 olist_customers_dataset 生成] 檢查主角欄位 customer_state 的各類別筆數與佔比\nSELECT \n    \"customer_state\",\n    COUNT(*) AS 筆數,\n    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM \"olist_customers_dataset\"), 2) AS 佔比百分比\nFROM \"olist_customers_dataset\"\nGROUP BY \"customer_state\"\nORDER BY 筆數 DESC\nLIMIT 30;",
+      "note": "💡 【專案 `olist_customers_dataset` - Step 1】\n系統已自動將目標欄位設為 `customer_state`。先觀察各類別筆數與佔比是否平衡！",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "customer_state",
+        "y1_col": "筆數",
+        "y2_col": "佔比百分比"
+      }
+    },
+    {
+      "id": "olist_customers_dataset_sql_step2",
+      "lang": "sql",
+      "title": "【Step 2 全表比較】依 customer_state 分組比較關鍵指標平均值",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "sql": "-- [自動為 olist_customers_dataset 生成] 比較不同 customer_state 分組下的關鍵數值指標平均差異\nSELECT \n    \"customer_state\",\n    COUNT(*) AS 樣本數,\n    ROUND(AVG(\"customer_zip_code_prefix\"), 2) AS \"平均_customer_zip_code_prefix\"\nFROM \"olist_customers_dataset\"\nGROUP BY \"customer_state\"\nORDER BY \"customer_state\"\nLIMIT 20;",
+      "note": "💡 【專案 `olist_customers_dataset` - Step 2】\n系統已自動挑選出與 `customer_state` 最相關的前幾個數值欄位：customer_zip_code_prefix，比較它們在不同分組下的平均值差異。",
+      "chart_config": {
+        "type": "grouped_bar",
+        "x_col": "customer_state",
+        "y1_col": "平均_customer_zip_code_prefix",
+        "y2_col": ""
+      }
+    },
+    {
+      "id": "olist_customers_dataset_sql_step3_f1",
+      "lang": "sql",
+      "title": "【Step 3 找分界線 A】頭號關鍵欄位 customer_zip_code_prefix 對 customer_state 的影響",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "-- 針對關鍵欄位 customer_zip_code_prefix 自動切區間，觀察對 customer_state 的影響\nSELECT \n    CAST(ROUND(\"customer_zip_code_prefix\" / 12373) * 12373 AS TEXT) AS \"customer_zip_code_prefix_區間\",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG(\"customer_state\"), 2) AS \"customer_state_平均值\"\nFROM \"olist_customers_dataset\"\nGROUP BY ROUND(\"customer_zip_code_prefix\" / 12373) * 12373\nORDER BY ROUND(\"customer_zip_code_prefix\" / 12373) * 12373;",
+      "note": "💡 【專案 `olist_customers_dataset` - Step 3-A】\n`customer_zip_code_prefix` 是目前與 `customer_state` 相關度排名第 1 的特徵。請觀察左下方雙軸圖中紅色折線（customer_state_平均值）隨 `customer_zip_code_prefix` 變化的轉折點！",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "customer_zip_code_prefix_區間",
+        "y1_col": "customer_state_平均值",
+        "y2_col": "總筆數"
+      }
+    },
+    {
+      "id": "olist_customers_dataset_sql_step3_f2",
+      "lang": "sql",
+      "title": "【Step 3 找分界線 B】第二關鍵欄位 customer_zip_code_prefix 對 customer_state 的影響",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "-- 針對第二關鍵欄位 customer_zip_code_prefix 自動切區間，觀察對 customer_state 的影響\nSELECT \n    CAST(ROUND(\"customer_zip_code_prefix\" / 12373) * 12373 AS TEXT) AS \"customer_zip_code_prefix_區間\",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG(\"customer_state\"), 2) AS \"customer_state_平均值\"\nFROM \"olist_customers_dataset\"\nGROUP BY ROUND(\"customer_zip_code_prefix\" / 12373) * 12373\nORDER BY ROUND(\"customer_zip_code_prefix\" / 12373) * 12373;",
+      "note": "💡 【專案 `olist_customers_dataset` - Step 3-B】\n觀察排名第 2 的特徵 `customer_zip_code_prefix` 在各區間下對 `customer_state` 的影響趨勢。",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "customer_zip_code_prefix_區間",
+        "y1_col": "customer_state_平均值",
+        "y2_col": "總筆數"
+      }
+    },
+    {
+      "id": "olist_customers_dataset_py_step1_check",
+      "lang": "python",
+      "title": "【Python 基礎 1】olist_customers_dataset 數據體檢三連發 (空值 / 重複 / describe)",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "sql": "# [自動為 olist_customers_dataset 生成] 系統已將 \"olist_customers_dataset\" 載入為 df\nprint(\"=== 1. 資料表維度 (筆數, 欄位數) ===\")\nprint(df.shape)\n\nprint(\"\\n=== 2. 檢查每個欄位的空值數量 ===\")\nprint(df.isnull().sum())\n\nprint(\"\\n=== 3. 檢查完全重複的紀錄筆數 ===\")\nprint(\"重複筆數:\", df.duplicated().sum())\n\nprint(\"\\n=== 4. 目標欄位 customer_state 分佈前 10 項 ===\")\nprint(df['customer_state'].value_counts(dropna=False).head(10))\n\n# 最後一行自動轉成右下角互動式統計表\ndf.describe().T.round(2)",
+      "note": "💡 【Python 自動體檢】\n一鍵檢查 `olist_customers_dataset` 的維度、缺失值、重複筆數與統計摘要！",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_customers_dataset_py_step2_heatmap",
+      "lang": "python",
+      "title": "【Python 視覺化 1】olist_customers_dataset 數值欄位相關性熱力圖 (Heatmap)",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "sql": "# [自動為 olist_customers_dataset 生成] 計算數值欄位相關係數並繪製熱力圖\nnum_df = df.select_dtypes(include=[np.number])\n\nif num_df.shape[1] >= 2:\n    # 若數值欄位超過 10 個，挑選與目標最相關的前 10 個繪圖以免擁擠\n    cols_to_plot = list(num_df.columns[:10])\n    if 'customer_state' in num_df.columns:\n        corr_target = num_df.corr()['customer_state'].abs().sort_values(ascending=False)\n        cols_to_plot = list(corr_target.index[:10])\n\n    plt.figure(figsize=(8.5, 6.5), dpi=130)\n    sns.heatmap(num_df[cols_to_plot].corr(), annot=True, fmt=\".2f\", cmap=\"coolwarm\", linewidths=1)\n    plt.title(\"olist_customers_dataset - 重點數值特徵相關係數熱力圖\", fontsize=12, fontweight=\"bold\", pad=12)\n    plt.tight_layout()\n    print(\"✅ 已完成相關性熱力圖繪製！\")\nelse:\n    print(\"⚠️ 數值型欄位不足 2 個，無法繪製相關性熱力圖。\")\n\nnum_df.corr().round(3) if num_df.shape[1] >= 2 else df.head(20)",
+      "note": "💡 【Python 相關性矩陣】\n自動挑選出 `olist_customers_dataset` 中與 `customer_state` 最相關的數值特徵繪製熱力圖。",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_customers_dataset_py_step3_visual",
+      "lang": "python",
+      "title": "【Python 視覺化 2】關鍵特徵 (customer_zip_code_prefix) 分佈與對比圖",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "# [自動為 olist_customers_dataset 生成] 針對前 4 大關鍵數值特徵繪製分組箱型圖或分佈圖\nkey_cols = [c for c in ['customer_zip_code_prefix'] if c in df.columns]\ntarget = 'customer_state'\n\nif len(key_cols) > 0:\n    n = len(key_cols)\n    rows = 2 if n > 2 else 1\n    cols = 2 if n > 1 else 1\n    fig, axes = plt.subplots(rows, cols, figsize=(11, 3.6 * rows), dpi=130)\n    axes_list = np.array(axes).reshape(-1) if n > 1 else [axes]\n\n    # 若目標變數類別數 <= 8，畫分組箱型圖；否則畫散佈趨勢圖\n    is_cat_target = df[target].nunique() <= 8\n\n    for ax, col in zip(axes_list, key_cols):\n        if is_cat_target:\n            sns.boxplot(data=df, x=target, y=col, ax=ax, palette=\"Set2\", width=0.45)\n            ax.set_title(f\"{col} (依 {target} 分組箱型圖)\", fontsize=11, fontweight=\"bold\")\n        else:\n            sns.scatterplot(data=df.sample(min(len(df), 500), random_state=42), x=col, y=target, ax=ax, alpha=0.6)\n            ax.set_title(f\"{col} vs {target} 散佈圖\", fontsize=11, fontweight=\"bold\")\n\n    plt.tight_layout()\n    print(\"✅ 已繪製關鍵特徵對比圖！\")\ndf[key_cols + ([target] if target not in key_cols else [])].describe().T.round(2)",
+      "note": "💡 【Python 自動視覺化】\n系統會自動判斷 `customer_state` 是分類型（畫分組箱型圖 Boxplot）還是連續數值型（畫散佈圖 Scatterplot）！",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_customers_dataset_py_step4_ml",
+      "lang": "python",
+      "title": "【Python 機器學習】自動訓練隨機森林找出影響 customer_state 的特徵重要性排行",
+      "step_tag": "Step 4: 規則驗證 (Validate)",
+      "sql": "# [自動為 olist_customers_dataset 生成] 自動判別分類或迴歸任務，用隨機森林找出關鍵特徵\nfrom sklearn.ensemble import RandomForestClassifier, RandomForestRegressor\n\ntarget = 'customer_state'\nclean_df = df.dropna(subset=[target]).copy()\n\n# 取出數值特徵並填補空值\nX = clean_df.drop(columns=[target]).select_dtypes(include=[np.number]).fillna(0)\ny = clean_df[target]\n\nif X.shape[1] > 0:\n    is_classification = (y.nunique() <= 15) or (y.dtype == 'object')\n    if is_classification:\n        model = RandomForestClassifier(n_estimators=100, random_state=42)\n        task_name = \"分類模型 (Classification)\"\n    else:\n        model = RandomForestRegressor(n_estimators=100, random_state=42)\n        task_name = \"迴歸模型 (Regression)\"\n\n    model.fit(X, y)\n    score = model.score(X, y)\n    print(f\"🎯 模型類型: {task_name}\")\n    print(f\"🎯 模型擬合分數 (Accuracy / R2): {score*100:.2f}%\")\n\n    imp_df = pd.DataFrame({\n        '特徵名稱': X.columns,\n        '重要性佔比(%)': (model.feature_importances_ * 100).round(2)\n    }).sort_values('重要性佔比(%)', ascending=True)\n\n    plt.figure(figsize=(8, max(4, len(X.columns)*0.35)), dpi=130)\n    colors = ['#e11d48' if v >= 10 else '#64748b' for v in imp_df['重要性佔比(%)']]\n    plt.barh(imp_df['特徵名稱'], imp_df['重要性佔比(%)'], color=colors, edgecolor='black')\n    plt.xlabel('隨機森林特徵重要性 (%)')\n    plt.title(f'影響 {target} 的關鍵特徵排行 ({table_name})', fontweight='bold')\n    plt.grid(axis='x', linestyle='--', alpha=0.5)\n    plt.tight_layout()\nelse:\n    imp_df = pd.DataFrame({'提示': ['無足夠數值特徵可供建模']})\n\nimp_df.sort_values('重要性佔比(%)', ascending=False) if '重要性佔比(%)' in imp_df.columns else imp_df",
+      "note": "💡 【通用機器學習特徵掃描】\n這段程式碼會自動判斷 `customer_state` 是分類問題還是連續數值問題，並用隨機森林排出哪些欄位對 `customer_state` 最具決定性影響力！",
+      "chart_config": {}
+    }
+  ],
+  "olist_order_items_dataset": [
+    {
+      "id": "olist_order_items_dataset_sql_step1",
+      "lang": "sql",
+      "title": "【Step 1 看主角】檢查 freight_value 的分佈與比例",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "sql": "-- [自動為 olist_order_items_dataset 生成] 檢查主角欄位 freight_value 的各類別筆數與佔比\nSELECT \n    \"freight_value\",\n    COUNT(*) AS 筆數,\n    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM \"olist_order_items_dataset\"), 2) AS 佔比百分比\nFROM \"olist_order_items_dataset\"\nGROUP BY \"freight_value\"\nORDER BY 筆數 DESC\nLIMIT 30;",
+      "note": "💡 【專案 `olist_order_items_dataset` - Step 1】\n系統已自動將目標欄位設為 `freight_value`。先觀察各類別筆數與佔比是否平衡！",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "freight_value",
+        "y1_col": "筆數",
+        "y2_col": "佔比百分比"
+      }
+    },
+    {
+      "id": "olist_order_items_dataset_sql_step2",
+      "lang": "sql",
+      "title": "【Step 2 全表比較】依 freight_value 分組比較關鍵指標平均值",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "sql": "-- [自動為 olist_order_items_dataset 生成] 比較不同 freight_value 分組下的關鍵數值指標平均差異\nSELECT \n    \"freight_value\",\n    COUNT(*) AS 樣本數,\n    ROUND(AVG(\"price\"), 2) AS \"平均_price\",\n    ROUND(AVG(\"order_item_id\"), 2) AS \"平均_order_item_id\"\nFROM \"olist_order_items_dataset\"\nGROUP BY \"freight_value\"\nORDER BY \"freight_value\"\nLIMIT 20;",
+      "note": "💡 【專案 `olist_order_items_dataset` - Step 2】\n系統已自動挑選出與 `freight_value` 最相關的前幾個數值欄位：price, order_item_id，比較它們在不同分組下的平均值差異。",
+      "chart_config": {
+        "type": "grouped_bar",
+        "x_col": "freight_value",
+        "y1_col": "平均_price",
+        "y2_col": "平均_order_item_id"
+      }
+    },
+    {
+      "id": "olist_order_items_dataset_sql_step3_f1",
+      "lang": "sql",
+      "title": "【Step 3 找分界線 A】頭號關鍵欄位 price 對 freight_value 的影響",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "-- 針對關鍵欄位 price 自動切區間，觀察對 freight_value 的影響\nSELECT \n    CAST(ROUND(\"price\" / 842) * 842 AS TEXT) AS \"price_區間\",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG(\"freight_value\"), 2) AS \"freight_value_平均值\"\nFROM \"olist_order_items_dataset\"\nGROUP BY ROUND(\"price\" / 842) * 842\nORDER BY ROUND(\"price\" / 842) * 842;",
+      "note": "💡 【專案 `olist_order_items_dataset` - Step 3-A】\n`price` 是目前與 `freight_value` 相關度排名第 1 的特徵。請觀察左下方雙軸圖中紅色折線（freight_value_平均值）隨 `price` 變化的轉折點！",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "price_區間",
+        "y1_col": "freight_value_平均值",
+        "y2_col": "總筆數"
+      }
+    },
+    {
+      "id": "olist_order_items_dataset_sql_step3_f2",
+      "lang": "sql",
+      "title": "【Step 3 找分界線 B】第二關鍵欄位 order_item_id 對 freight_value 的影響",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "-- 針對第二關鍵欄位 order_item_id 自動切區間，觀察對 freight_value 的影響\nSELECT \n    CAST(ROUND(\"order_item_id\" / 2.5) * 2.5 AS TEXT) AS \"order_item_id_區間\",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG(\"freight_value\"), 2) AS \"freight_value_平均值\"\nFROM \"olist_order_items_dataset\"\nGROUP BY ROUND(\"order_item_id\" / 2.5) * 2.5\nORDER BY ROUND(\"order_item_id\" / 2.5) * 2.5;",
+      "note": "💡 【專案 `olist_order_items_dataset` - Step 3-B】\n觀察排名第 2 的特徵 `order_item_id` 在各區間下對 `freight_value` 的影響趨勢。",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "order_item_id_區間",
+        "y1_col": "freight_value_平均值",
+        "y2_col": "總筆數"
+      }
+    },
+    {
+      "id": "olist_order_items_dataset_py_step1_check",
+      "lang": "python",
+      "title": "【Python 基礎 1】olist_order_items_dataset 數據體檢三連發 (空值 / 重複 / describe)",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "sql": "# [自動為 olist_order_items_dataset 生成] 系統已將 \"olist_order_items_dataset\" 載入為 df\nprint(\"=== 1. 資料表維度 (筆數, 欄位數) ===\")\nprint(df.shape)\n\nprint(\"\\n=== 2. 檢查每個欄位的空值數量 ===\")\nprint(df.isnull().sum())\n\nprint(\"\\n=== 3. 檢查完全重複的紀錄筆數 ===\")\nprint(\"重複筆數:\", df.duplicated().sum())\n\nprint(\"\\n=== 4. 目標欄位 freight_value 分佈前 10 項 ===\")\nprint(df['freight_value'].value_counts(dropna=False).head(10))\n\n# 最後一行自動轉成右下角互動式統計表\ndf.describe().T.round(2)",
+      "note": "💡 【Python 自動體檢】\n一鍵檢查 `olist_order_items_dataset` 的維度、缺失值、重複筆數與統計摘要！",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_order_items_dataset_py_step2_heatmap",
+      "lang": "python",
+      "title": "【Python 視覺化 1】olist_order_items_dataset 數值欄位相關性熱力圖 (Heatmap)",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "sql": "# [自動為 olist_order_items_dataset 生成] 計算數值欄位相關係數並繪製熱力圖\nnum_df = df.select_dtypes(include=[np.number])\n\nif num_df.shape[1] >= 2:\n    # 若數值欄位超過 10 個，挑選與目標最相關的前 10 個繪圖以免擁擠\n    cols_to_plot = list(num_df.columns[:10])\n    if 'freight_value' in num_df.columns:\n        corr_target = num_df.corr()['freight_value'].abs().sort_values(ascending=False)\n        cols_to_plot = list(corr_target.index[:10])\n\n    plt.figure(figsize=(8.5, 6.5), dpi=130)\n    sns.heatmap(num_df[cols_to_plot].corr(), annot=True, fmt=\".2f\", cmap=\"coolwarm\", linewidths=1)\n    plt.title(\"olist_order_items_dataset - 重點數值特徵相關係數熱力圖\", fontsize=12, fontweight=\"bold\", pad=12)\n    plt.tight_layout()\n    print(\"✅ 已完成相關性熱力圖繪製！\")\nelse:\n    print(\"⚠️ 數值型欄位不足 2 個，無法繪製相關性熱力圖。\")\n\nnum_df.corr().round(3) if num_df.shape[1] >= 2 else df.head(20)",
+      "note": "💡 【Python 相關性矩陣】\n自動挑選出 `olist_order_items_dataset` 中與 `freight_value` 最相關的數值特徵繪製熱力圖。",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_order_items_dataset_py_step3_visual",
+      "lang": "python",
+      "title": "【Python 視覺化 2】關鍵特徵 (price, order_item_id) 分佈與對比圖",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "# [自動為 olist_order_items_dataset 生成] 針對前 4 大關鍵數值特徵繪製分組箱型圖或分佈圖\nkey_cols = [c for c in ['price', 'order_item_id'] if c in df.columns]\ntarget = 'freight_value'\n\nif len(key_cols) > 0:\n    n = len(key_cols)\n    rows = 2 if n > 2 else 1\n    cols = 2 if n > 1 else 1\n    fig, axes = plt.subplots(rows, cols, figsize=(11, 3.6 * rows), dpi=130)\n    axes_list = np.array(axes).reshape(-1) if n > 1 else [axes]\n\n    # 若目標變數類別數 <= 8，畫分組箱型圖；否則畫散佈趨勢圖\n    is_cat_target = df[target].nunique() <= 8\n\n    for ax, col in zip(axes_list, key_cols):\n        if is_cat_target:\n            sns.boxplot(data=df, x=target, y=col, ax=ax, palette=\"Set2\", width=0.45)\n            ax.set_title(f\"{col} (依 {target} 分組箱型圖)\", fontsize=11, fontweight=\"bold\")\n        else:\n            sns.scatterplot(data=df.sample(min(len(df), 500), random_state=42), x=col, y=target, ax=ax, alpha=0.6)\n            ax.set_title(f\"{col} vs {target} 散佈圖\", fontsize=11, fontweight=\"bold\")\n\n    plt.tight_layout()\n    print(\"✅ 已繪製關鍵特徵對比圖！\")\ndf[key_cols + ([target] if target not in key_cols else [])].describe().T.round(2)",
+      "note": "💡 【Python 自動視覺化】\n系統會自動判斷 `freight_value` 是分類型（畫分組箱型圖 Boxplot）還是連續數值型（畫散佈圖 Scatterplot）！",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_order_items_dataset_py_step4_ml",
+      "lang": "python",
+      "title": "【Python 機器學習】自動訓練隨機森林找出影響 freight_value 的特徵重要性排行",
+      "step_tag": "Step 4: 規則驗證 (Validate)",
+      "sql": "# [自動為 olist_order_items_dataset 生成] 自動判別分類或迴歸任務，用隨機森林找出關鍵特徵\nfrom sklearn.ensemble import RandomForestClassifier, RandomForestRegressor\n\ntarget = 'freight_value'\nclean_df = df.dropna(subset=[target]).copy()\n\n# 取出數值特徵並填補空值\nX = clean_df.drop(columns=[target]).select_dtypes(include=[np.number]).fillna(0)\ny = clean_df[target]\n\nif X.shape[1] > 0:\n    is_classification = (y.nunique() <= 15) or (y.dtype == 'object')\n    if is_classification:\n        model = RandomForestClassifier(n_estimators=100, random_state=42)\n        task_name = \"分類模型 (Classification)\"\n    else:\n        model = RandomForestRegressor(n_estimators=100, random_state=42)\n        task_name = \"迴歸模型 (Regression)\"\n\n    model.fit(X, y)\n    score = model.score(X, y)\n    print(f\"🎯 模型類型: {task_name}\")\n    print(f\"🎯 模型擬合分數 (Accuracy / R2): {score*100:.2f}%\")\n\n    imp_df = pd.DataFrame({\n        '特徵名稱': X.columns,\n        '重要性佔比(%)': (model.feature_importances_ * 100).round(2)\n    }).sort_values('重要性佔比(%)', ascending=True)\n\n    plt.figure(figsize=(8, max(4, len(X.columns)*0.35)), dpi=130)\n    colors = ['#e11d48' if v >= 10 else '#64748b' for v in imp_df['重要性佔比(%)']]\n    plt.barh(imp_df['特徵名稱'], imp_df['重要性佔比(%)'], color=colors, edgecolor='black')\n    plt.xlabel('隨機森林特徵重要性 (%)')\n    plt.title(f'影響 {target} 的關鍵特徵排行 ({table_name})', fontweight='bold')\n    plt.grid(axis='x', linestyle='--', alpha=0.5)\n    plt.tight_layout()\nelse:\n    imp_df = pd.DataFrame({'提示': ['無足夠數值特徵可供建模']})\n\nimp_df.sort_values('重要性佔比(%)', ascending=False) if '重要性佔比(%)' in imp_df.columns else imp_df",
+      "note": "💡 【通用機器學習特徵掃描】\n這段程式碼會自動判斷 `freight_value` 是分類問題還是連續數值問題，並用隨機森林排出哪些欄位對 `freight_value` 最具決定性影響力！",
+      "chart_config": {}
+    }
+  ],
+  "olist_order_payments_dataset": [
+    {
+      "id": "olist_order_payments_dataset_sql_step1",
+      "lang": "sql",
+      "title": "【Step 1 看主角】檢查 payment_value 的分佈與比例",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "sql": "-- [自動為 olist_order_payments_dataset 生成] 檢查主角欄位 payment_value 的各類別筆數與佔比\nSELECT \n    \"payment_value\",\n    COUNT(*) AS 筆數,\n    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM \"olist_order_payments_dataset\"), 2) AS 佔比百分比\nFROM \"olist_order_payments_dataset\"\nGROUP BY \"payment_value\"\nORDER BY 筆數 DESC\nLIMIT 30;",
+      "note": "💡 【專案 `olist_order_payments_dataset` - Step 1】\n系統已自動將目標欄位設為 `payment_value`。先觀察各類別筆數與佔比是否平衡！",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "payment_value",
+        "y1_col": "筆數",
+        "y2_col": "佔比百分比"
+      }
+    },
+    {
+      "id": "olist_order_payments_dataset_sql_step2",
+      "lang": "sql",
+      "title": "【Step 2 全表比較】依 payment_value 分組比較關鍵指標平均值",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "sql": "-- [自動為 olist_order_payments_dataset 生成] 比較不同 payment_value 分組下的關鍵數值指標平均差異\nSELECT \n    \"payment_value\",\n    COUNT(*) AS 樣本數,\n    ROUND(AVG(\"payment_installments\"), 2) AS \"平均_payment_installments\",\n    ROUND(AVG(\"payment_sequential\"), 2) AS \"平均_payment_sequential\"\nFROM \"olist_order_payments_dataset\"\nGROUP BY \"payment_value\"\nORDER BY \"payment_value\"\nLIMIT 20;",
+      "note": "💡 【專案 `olist_order_payments_dataset` - Step 2】\n系統已自動挑選出與 `payment_value` 最相關的前幾個數值欄位：payment_installments, payment_sequential，比較它們在不同分組下的平均值差異。",
+      "chart_config": {
+        "type": "grouped_bar",
+        "x_col": "payment_value",
+        "y1_col": "平均_payment_installments",
+        "y2_col": "平均_payment_sequential"
+      }
+    },
+    {
+      "id": "olist_order_payments_dataset_sql_step3_f1",
+      "lang": "sql",
+      "title": "【Step 3 找分界線 A】頭號關鍵欄位 payment_installments 對 payment_value 的影響",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "-- 針對關鍵欄位 payment_installments 自動切區間，觀察對 payment_value 的影響\nSELECT \n    CAST(ROUND(\"payment_installments\" / 3.0) * 3.0 AS TEXT) AS \"payment_installments_區間\",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG(\"payment_value\"), 2) AS \"payment_value_平均值\"\nFROM \"olist_order_payments_dataset\"\nGROUP BY ROUND(\"payment_installments\" / 3.0) * 3.0\nORDER BY ROUND(\"payment_installments\" / 3.0) * 3.0;",
+      "note": "💡 【專案 `olist_order_payments_dataset` - Step 3-A】\n`payment_installments` 是目前與 `payment_value` 相關度排名第 1 的特徵。請觀察左下方雙軸圖中紅色折線（payment_value_平均值）隨 `payment_installments` 變化的轉折點！",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "payment_installments_區間",
+        "y1_col": "payment_value_平均值",
+        "y2_col": "總筆數"
+      }
+    },
+    {
+      "id": "olist_order_payments_dataset_sql_step3_f2",
+      "lang": "sql",
+      "title": "【Step 3 找分界線 B】第二關鍵欄位 payment_sequential 對 payment_value 的影響",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "-- 針對第二關鍵欄位 payment_sequential 自動切區間，觀察對 payment_value 的影響\nSELECT \n    CAST(ROUND(\"payment_sequential\" / 3.5) * 3.5 AS TEXT) AS \"payment_sequential_區間\",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG(\"payment_value\"), 2) AS \"payment_value_平均值\"\nFROM \"olist_order_payments_dataset\"\nGROUP BY ROUND(\"payment_sequential\" / 3.5) * 3.5\nORDER BY ROUND(\"payment_sequential\" / 3.5) * 3.5;",
+      "note": "💡 【專案 `olist_order_payments_dataset` - Step 3-B】\n觀察排名第 2 的特徵 `payment_sequential` 在各區間下對 `payment_value` 的影響趨勢。",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "payment_sequential_區間",
+        "y1_col": "payment_value_平均值",
+        "y2_col": "總筆數"
+      }
+    },
+    {
+      "id": "olist_order_payments_dataset_py_step1_check",
+      "lang": "python",
+      "title": "【Python 基礎 1】olist_order_payments_dataset 數據體檢三連發 (空值 / 重複 / describe)",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "sql": "# [自動為 olist_order_payments_dataset 生成] 系統已將 \"olist_order_payments_dataset\" 載入為 df\nprint(\"=== 1. 資料表維度 (筆數, 欄位數) ===\")\nprint(df.shape)\n\nprint(\"\\n=== 2. 檢查每個欄位的空值數量 ===\")\nprint(df.isnull().sum())\n\nprint(\"\\n=== 3. 檢查完全重複的紀錄筆數 ===\")\nprint(\"重複筆數:\", df.duplicated().sum())\n\nprint(\"\\n=== 4. 目標欄位 payment_value 分佈前 10 項 ===\")\nprint(df['payment_value'].value_counts(dropna=False).head(10))\n\n# 最後一行自動轉成右下角互動式統計表\ndf.describe().T.round(2)",
+      "note": "💡 【Python 自動體檢】\n一鍵檢查 `olist_order_payments_dataset` 的維度、缺失值、重複筆數與統計摘要！",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_order_payments_dataset_py_step2_heatmap",
+      "lang": "python",
+      "title": "【Python 視覺化 1】olist_order_payments_dataset 數值欄位相關性熱力圖 (Heatmap)",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "sql": "# [自動為 olist_order_payments_dataset 生成] 計算數值欄位相關係數並繪製熱力圖\nnum_df = df.select_dtypes(include=[np.number])\n\nif num_df.shape[1] >= 2:\n    # 若數值欄位超過 10 個，挑選與目標最相關的前 10 個繪圖以免擁擠\n    cols_to_plot = list(num_df.columns[:10])\n    if 'payment_value' in num_df.columns:\n        corr_target = num_df.corr()['payment_value'].abs().sort_values(ascending=False)\n        cols_to_plot = list(corr_target.index[:10])\n\n    plt.figure(figsize=(8.5, 6.5), dpi=130)\n    sns.heatmap(num_df[cols_to_plot].corr(), annot=True, fmt=\".2f\", cmap=\"coolwarm\", linewidths=1)\n    plt.title(\"olist_order_payments_dataset - 重點數值特徵相關係數熱力圖\", fontsize=12, fontweight=\"bold\", pad=12)\n    plt.tight_layout()\n    print(\"✅ 已完成相關性熱力圖繪製！\")\nelse:\n    print(\"⚠️ 數值型欄位不足 2 個，無法繪製相關性熱力圖。\")\n\nnum_df.corr().round(3) if num_df.shape[1] >= 2 else df.head(20)",
+      "note": "💡 【Python 相關性矩陣】\n自動挑選出 `olist_order_payments_dataset` 中與 `payment_value` 最相關的數值特徵繪製熱力圖。",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_order_payments_dataset_py_step3_visual",
+      "lang": "python",
+      "title": "【Python 視覺化 2】關鍵特徵 (payment_installments, payment_sequential) 分佈與對比圖",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "# [自動為 olist_order_payments_dataset 生成] 針對前 4 大關鍵數值特徵繪製分組箱型圖或分佈圖\nkey_cols = [c for c in ['payment_installments', 'payment_sequential'] if c in df.columns]\ntarget = 'payment_value'\n\nif len(key_cols) > 0:\n    n = len(key_cols)\n    rows = 2 if n > 2 else 1\n    cols = 2 if n > 1 else 1\n    fig, axes = plt.subplots(rows, cols, figsize=(11, 3.6 * rows), dpi=130)\n    axes_list = np.array(axes).reshape(-1) if n > 1 else [axes]\n\n    # 若目標變數類別數 <= 8，畫分組箱型圖；否則畫散佈趨勢圖\n    is_cat_target = df[target].nunique() <= 8\n\n    for ax, col in zip(axes_list, key_cols):\n        if is_cat_target:\n            sns.boxplot(data=df, x=target, y=col, ax=ax, palette=\"Set2\", width=0.45)\n            ax.set_title(f\"{col} (依 {target} 分組箱型圖)\", fontsize=11, fontweight=\"bold\")\n        else:\n            sns.scatterplot(data=df.sample(min(len(df), 500), random_state=42), x=col, y=target, ax=ax, alpha=0.6)\n            ax.set_title(f\"{col} vs {target} 散佈圖\", fontsize=11, fontweight=\"bold\")\n\n    plt.tight_layout()\n    print(\"✅ 已繪製關鍵特徵對比圖！\")\ndf[key_cols + ([target] if target not in key_cols else [])].describe().T.round(2)",
+      "note": "💡 【Python 自動視覺化】\n系統會自動判斷 `payment_value` 是分類型（畫分組箱型圖 Boxplot）還是連續數值型（畫散佈圖 Scatterplot）！",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_order_payments_dataset_py_step4_ml",
+      "lang": "python",
+      "title": "【Python 機器學習】自動訓練隨機森林找出影響 payment_value 的特徵重要性排行",
+      "step_tag": "Step 4: 規則驗證 (Validate)",
+      "sql": "# [自動為 olist_order_payments_dataset 生成] 自動判別分類或迴歸任務，用隨機森林找出關鍵特徵\nfrom sklearn.ensemble import RandomForestClassifier, RandomForestRegressor\n\ntarget = 'payment_value'\nclean_df = df.dropna(subset=[target]).copy()\n\n# 取出數值特徵並填補空值\nX = clean_df.drop(columns=[target]).select_dtypes(include=[np.number]).fillna(0)\ny = clean_df[target]\n\nif X.shape[1] > 0:\n    is_classification = (y.nunique() <= 15) or (y.dtype == 'object')\n    if is_classification:\n        model = RandomForestClassifier(n_estimators=100, random_state=42)\n        task_name = \"分類模型 (Classification)\"\n    else:\n        model = RandomForestRegressor(n_estimators=100, random_state=42)\n        task_name = \"迴歸模型 (Regression)\"\n\n    model.fit(X, y)\n    score = model.score(X, y)\n    print(f\"🎯 模型類型: {task_name}\")\n    print(f\"🎯 模型擬合分數 (Accuracy / R2): {score*100:.2f}%\")\n\n    imp_df = pd.DataFrame({\n        '特徵名稱': X.columns,\n        '重要性佔比(%)': (model.feature_importances_ * 100).round(2)\n    }).sort_values('重要性佔比(%)', ascending=True)\n\n    plt.figure(figsize=(8, max(4, len(X.columns)*0.35)), dpi=130)\n    colors = ['#e11d48' if v >= 10 else '#64748b' for v in imp_df['重要性佔比(%)']]\n    plt.barh(imp_df['特徵名稱'], imp_df['重要性佔比(%)'], color=colors, edgecolor='black')\n    plt.xlabel('隨機森林特徵重要性 (%)')\n    plt.title(f'影響 {target} 的關鍵特徵排行 ({table_name})', fontweight='bold')\n    plt.grid(axis='x', linestyle='--', alpha=0.5)\n    plt.tight_layout()\nelse:\n    imp_df = pd.DataFrame({'提示': ['無足夠數值特徵可供建模']})\n\nimp_df.sort_values('重要性佔比(%)', ascending=False) if '重要性佔比(%)' in imp_df.columns else imp_df",
+      "note": "💡 【通用機器學習特徵掃描】\n這段程式碼會自動判斷 `payment_value` 是分類問題還是連續數值問題，並用隨機森林排出哪些欄位對 `payment_value` 最具決定性影響力！",
+      "chart_config": {}
+    }
+  ],
+  "olist_order_reviews_dataset": [
+    {
+      "id": "olist_order_reviews_dataset_sql_step1",
+      "lang": "sql",
+      "title": "【Step 1 看主角】檢查 review_answer_timestamp 的分佈與比例",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "sql": "-- [自動為 olist_order_reviews_dataset 生成] 檢查主角欄位 review_answer_timestamp 的各類別筆數與佔比\nSELECT \n    \"review_answer_timestamp\",\n    COUNT(*) AS 筆數,\n    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM \"olist_order_reviews_dataset\"), 2) AS 佔比百分比\nFROM \"olist_order_reviews_dataset\"\nGROUP BY \"review_answer_timestamp\"\nORDER BY 筆數 DESC\nLIMIT 30;",
+      "note": "💡 【專案 `olist_order_reviews_dataset` - Step 1】\n系統已自動將目標欄位設為 `review_answer_timestamp`。先觀察各類別筆數與佔比是否平衡！",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "review_answer_timestamp",
+        "y1_col": "筆數",
+        "y2_col": "佔比百分比"
+      }
+    },
+    {
+      "id": "olist_order_reviews_dataset_sql_step2",
+      "lang": "sql",
+      "title": "【Step 2 全表比較】依 review_answer_timestamp 分組比較關鍵指標平均值",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "sql": "-- [自動為 olist_order_reviews_dataset 生成] 比較不同 review_answer_timestamp 分組下的關鍵數值指標平均差異\nSELECT \n    \"review_answer_timestamp\",\n    COUNT(*) AS 樣本數,\n    ROUND(AVG(\"review_score\"), 2) AS \"平均_review_score\"\nFROM \"olist_order_reviews_dataset\"\nGROUP BY \"review_answer_timestamp\"\nORDER BY \"review_answer_timestamp\"\nLIMIT 20;",
+      "note": "💡 【專案 `olist_order_reviews_dataset` - Step 2】\n系統已自動挑選出與 `review_answer_timestamp` 最相關的前幾個數值欄位：review_score，比較它們在不同分組下的平均值差異。",
+      "chart_config": {
+        "type": "grouped_bar",
+        "x_col": "review_answer_timestamp",
+        "y1_col": "平均_review_score",
+        "y2_col": ""
+      }
+    },
+    {
+      "id": "olist_order_reviews_dataset_sql_step3_f1",
+      "lang": "sql",
+      "title": "【Step 3 找分界線 A】頭號關鍵欄位 review_score 對 review_answer_timestamp 的影響",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "-- 觀察不同 review_score 下的筆數與 review_answer_timestamp 變化\nSELECT \n    \"review_score\",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG(\"review_answer_timestamp\"), 2) AS \"review_answer_timestamp_平均值\"\nFROM \"olist_order_reviews_dataset\"\nGROUP BY \"review_score\"\nORDER BY \"review_score\";",
+      "note": "💡 【專案 `olist_order_reviews_dataset` - Step 3-A】\n`review_score` 是目前與 `review_answer_timestamp` 相關度排名第 1 的特徵。請觀察左下方雙軸圖中紅色折線（review_answer_timestamp_平均值）隨 `review_score` 變化的轉折點！",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "review_score",
+        "y1_col": "review_answer_timestamp_平均值",
+        "y2_col": "總筆數"
+      }
+    },
+    {
+      "id": "olist_order_reviews_dataset_sql_step3_f2",
+      "lang": "sql",
+      "title": "【Step 3 找分界線 B】第二關鍵欄位 review_score 對 review_answer_timestamp 的影響",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "-- 觀察不同 review_score 下的筆數與 review_answer_timestamp 變化\nSELECT \n    \"review_score\",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG(\"review_answer_timestamp\"), 2) AS \"review_answer_timestamp_平均值\"\nFROM \"olist_order_reviews_dataset\"\nGROUP BY \"review_score\"\nORDER BY \"review_score\";",
+      "note": "💡 【專案 `olist_order_reviews_dataset` - Step 3-B】\n觀察排名第 2 的特徵 `review_score` 在各區間下對 `review_answer_timestamp` 的影響趨勢。",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "review_score",
+        "y1_col": "review_answer_timestamp_平均值",
+        "y2_col": "總筆數"
+      }
+    },
+    {
+      "id": "olist_order_reviews_dataset_py_step1_check",
+      "lang": "python",
+      "title": "【Python 基礎 1】olist_order_reviews_dataset 數據體檢三連發 (空值 / 重複 / describe)",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "sql": "# [自動為 olist_order_reviews_dataset 生成] 系統已將 \"olist_order_reviews_dataset\" 載入為 df\nprint(\"=== 1. 資料表維度 (筆數, 欄位數) ===\")\nprint(df.shape)\n\nprint(\"\\n=== 2. 檢查每個欄位的空值數量 ===\")\nprint(df.isnull().sum())\n\nprint(\"\\n=== 3. 檢查完全重複的紀錄筆數 ===\")\nprint(\"重複筆數:\", df.duplicated().sum())\n\nprint(\"\\n=== 4. 目標欄位 review_answer_timestamp 分佈前 10 項 ===\")\nprint(df['review_answer_timestamp'].value_counts(dropna=False).head(10))\n\n# 最後一行自動轉成右下角互動式統計表\ndf.describe().T.round(2)",
+      "note": "💡 【Python 自動體檢】\n一鍵檢查 `olist_order_reviews_dataset` 的維度、缺失值、重複筆數與統計摘要！",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_order_reviews_dataset_py_step2_heatmap",
+      "lang": "python",
+      "title": "【Python 視覺化 1】olist_order_reviews_dataset 數值欄位相關性熱力圖 (Heatmap)",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "sql": "# [自動為 olist_order_reviews_dataset 生成] 計算數值欄位相關係數並繪製熱力圖\nnum_df = df.select_dtypes(include=[np.number])\n\nif num_df.shape[1] >= 2:\n    # 若數值欄位超過 10 個，挑選與目標最相關的前 10 個繪圖以免擁擠\n    cols_to_plot = list(num_df.columns[:10])\n    if 'review_answer_timestamp' in num_df.columns:\n        corr_target = num_df.corr()['review_answer_timestamp'].abs().sort_values(ascending=False)\n        cols_to_plot = list(corr_target.index[:10])\n\n    plt.figure(figsize=(8.5, 6.5), dpi=130)\n    sns.heatmap(num_df[cols_to_plot].corr(), annot=True, fmt=\".2f\", cmap=\"coolwarm\", linewidths=1)\n    plt.title(\"olist_order_reviews_dataset - 重點數值特徵相關係數熱力圖\", fontsize=12, fontweight=\"bold\", pad=12)\n    plt.tight_layout()\n    print(\"✅ 已完成相關性熱力圖繪製！\")\nelse:\n    print(\"⚠️ 數值型欄位不足 2 個，無法繪製相關性熱力圖。\")\n\nnum_df.corr().round(3) if num_df.shape[1] >= 2 else df.head(20)",
+      "note": "💡 【Python 相關性矩陣】\n自動挑選出 `olist_order_reviews_dataset` 中與 `review_answer_timestamp` 最相關的數值特徵繪製熱力圖。",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_order_reviews_dataset_py_step3_visual",
+      "lang": "python",
+      "title": "【Python 視覺化 2】關鍵特徵 (review_score) 分佈與對比圖",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "# [自動為 olist_order_reviews_dataset 生成] 針對前 4 大關鍵數值特徵繪製分組箱型圖或分佈圖\nkey_cols = [c for c in ['review_score'] if c in df.columns]\ntarget = 'review_answer_timestamp'\n\nif len(key_cols) > 0:\n    n = len(key_cols)\n    rows = 2 if n > 2 else 1\n    cols = 2 if n > 1 else 1\n    fig, axes = plt.subplots(rows, cols, figsize=(11, 3.6 * rows), dpi=130)\n    axes_list = np.array(axes).reshape(-1) if n > 1 else [axes]\n\n    # 若目標變數類別數 <= 8，畫分組箱型圖；否則畫散佈趨勢圖\n    is_cat_target = df[target].nunique() <= 8\n\n    for ax, col in zip(axes_list, key_cols):\n        if is_cat_target:\n            sns.boxplot(data=df, x=target, y=col, ax=ax, palette=\"Set2\", width=0.45)\n            ax.set_title(f\"{col} (依 {target} 分組箱型圖)\", fontsize=11, fontweight=\"bold\")\n        else:\n            sns.scatterplot(data=df.sample(min(len(df), 500), random_state=42), x=col, y=target, ax=ax, alpha=0.6)\n            ax.set_title(f\"{col} vs {target} 散佈圖\", fontsize=11, fontweight=\"bold\")\n\n    plt.tight_layout()\n    print(\"✅ 已繪製關鍵特徵對比圖！\")\ndf[key_cols + ([target] if target not in key_cols else [])].describe().T.round(2)",
+      "note": "💡 【Python 自動視覺化】\n系統會自動判斷 `review_answer_timestamp` 是分類型（畫分組箱型圖 Boxplot）還是連續數值型（畫散佈圖 Scatterplot）！",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_order_reviews_dataset_py_step4_ml",
+      "lang": "python",
+      "title": "【Python 機器學習】自動訓練隨機森林找出影響 review_answer_timestamp 的特徵重要性排行",
+      "step_tag": "Step 4: 規則驗證 (Validate)",
+      "sql": "# [自動為 olist_order_reviews_dataset 生成] 自動判別分類或迴歸任務，用隨機森林找出關鍵特徵\nfrom sklearn.ensemble import RandomForestClassifier, RandomForestRegressor\n\ntarget = 'review_answer_timestamp'\nclean_df = df.dropna(subset=[target]).copy()\n\n# 取出數值特徵並填補空值\nX = clean_df.drop(columns=[target]).select_dtypes(include=[np.number]).fillna(0)\ny = clean_df[target]\n\nif X.shape[1] > 0:\n    is_classification = (y.nunique() <= 15) or (y.dtype == 'object')\n    if is_classification:\n        model = RandomForestClassifier(n_estimators=100, random_state=42)\n        task_name = \"分類模型 (Classification)\"\n    else:\n        model = RandomForestRegressor(n_estimators=100, random_state=42)\n        task_name = \"迴歸模型 (Regression)\"\n\n    model.fit(X, y)\n    score = model.score(X, y)\n    print(f\"🎯 模型類型: {task_name}\")\n    print(f\"🎯 模型擬合分數 (Accuracy / R2): {score*100:.2f}%\")\n\n    imp_df = pd.DataFrame({\n        '特徵名稱': X.columns,\n        '重要性佔比(%)': (model.feature_importances_ * 100).round(2)\n    }).sort_values('重要性佔比(%)', ascending=True)\n\n    plt.figure(figsize=(8, max(4, len(X.columns)*0.35)), dpi=130)\n    colors = ['#e11d48' if v >= 10 else '#64748b' for v in imp_df['重要性佔比(%)']]\n    plt.barh(imp_df['特徵名稱'], imp_df['重要性佔比(%)'], color=colors, edgecolor='black')\n    plt.xlabel('隨機森林特徵重要性 (%)')\n    plt.title(f'影響 {target} 的關鍵特徵排行 ({table_name})', fontweight='bold')\n    plt.grid(axis='x', linestyle='--', alpha=0.5)\n    plt.tight_layout()\nelse:\n    imp_df = pd.DataFrame({'提示': ['無足夠數值特徵可供建模']})\n\nimp_df.sort_values('重要性佔比(%)', ascending=False) if '重要性佔比(%)' in imp_df.columns else imp_df",
+      "note": "💡 【通用機器學習特徵掃描】\n這段程式碼會自動判斷 `review_answer_timestamp` 是分類問題還是連續數值問題，並用隨機森林排出哪些欄位對 `review_answer_timestamp` 最具決定性影響力！",
+      "chart_config": {}
+    }
+  ],
+  "olist_orders_dataset": [
+    {
+      "id": "olist_orders_dataset_sql_step1",
+      "lang": "sql",
+      "title": "【Step 1 看主角】檢查 order_estimated_delivery_date 的分佈與比例",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "sql": "-- [自動為 olist_orders_dataset 生成] 檢查主角欄位 order_estimated_delivery_date 的各類別筆數與佔比\nSELECT \n    \"order_estimated_delivery_date\",\n    COUNT(*) AS 筆數,\n    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM \"olist_orders_dataset\"), 2) AS 佔比百分比\nFROM \"olist_orders_dataset\"\nGROUP BY \"order_estimated_delivery_date\"\nORDER BY 筆數 DESC\nLIMIT 30;",
+      "note": "💡 【專案 `olist_orders_dataset` - Step 1】\n系統已自動將目標欄位設為 `order_estimated_delivery_date`。先觀察各類別筆數與佔比是否平衡！",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "order_estimated_delivery_date",
+        "y1_col": "筆數",
+        "y2_col": "佔比百分比"
+      }
+    },
+    {
+      "id": "olist_orders_dataset_sql_step2",
+      "lang": "sql",
+      "title": "【Step 2 全表比較】依 order_estimated_delivery_date 分組比較關鍵指標平均值",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "sql": "-- [自動為 olist_orders_dataset 生成] 比較不同 order_estimated_delivery_date 分組下的關鍵數值指標平均差異\nSELECT \n    \"order_estimated_delivery_date\",\n    COUNT(*) AS 樣本數,\n    COUNT(*) AS 樣本數\nFROM \"olist_orders_dataset\"\nGROUP BY \"order_estimated_delivery_date\"\nORDER BY \"order_estimated_delivery_date\"\nLIMIT 20;",
+      "note": "💡 【專案 `olist_orders_dataset` - Step 2】\n系統已自動挑選出與 `order_estimated_delivery_date` 最相關的前幾個數值欄位：，比較它們在不同分組下的平均值差異。",
+      "chart_config": {
+        "type": "grouped_bar",
+        "x_col": "order_estimated_delivery_date",
+        "y1_col": "樣本數",
+        "y2_col": ""
+      }
+    },
+    {
+      "id": "olist_orders_dataset_sql_step3_f1",
+      "lang": "sql",
+      "title": "【Step 3 找分界線 A】頭號關鍵欄位 order_id 對 order_estimated_delivery_date 的影響",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "-- 觀察不同 order_id 下的筆數與 order_estimated_delivery_date 變化\nSELECT \n    \"order_id\",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG(\"order_estimated_delivery_date\"), 2) AS \"order_estimated_delivery_date_平均值\"\nFROM \"olist_orders_dataset\"\nGROUP BY \"order_id\"\nORDER BY \"order_id\";",
+      "note": "💡 【專案 `olist_orders_dataset` - Step 3-A】\n`order_id` 是目前與 `order_estimated_delivery_date` 相關度排名第 1 的特徵。請觀察左下方雙軸圖中紅色折線（order_estimated_delivery_date_平均值）隨 `order_id` 變化的轉折點！",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "order_id",
+        "y1_col": "order_estimated_delivery_date_平均值",
+        "y2_col": "總筆數"
+      }
+    },
+    {
+      "id": "olist_orders_dataset_sql_step3_f2",
+      "lang": "sql",
+      "title": "【Step 3 找分界線 B】第二關鍵欄位 order_id 對 order_estimated_delivery_date 的影響",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "-- 觀察不同 order_id 下的筆數與 order_estimated_delivery_date 變化\nSELECT \n    \"order_id\",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG(\"order_estimated_delivery_date\"), 2) AS \"order_estimated_delivery_date_平均值\"\nFROM \"olist_orders_dataset\"\nGROUP BY \"order_id\"\nORDER BY \"order_id\";",
+      "note": "💡 【專案 `olist_orders_dataset` - Step 3-B】\n觀察排名第 2 的特徵 `order_id` 在各區間下對 `order_estimated_delivery_date` 的影響趨勢。",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "order_id",
+        "y1_col": "order_estimated_delivery_date_平均值",
+        "y2_col": "總筆數"
+      }
+    },
+    {
+      "id": "olist_orders_dataset_py_step1_check",
+      "lang": "python",
+      "title": "【Python 基礎 1】olist_orders_dataset 數據體檢三連發 (空值 / 重複 / describe)",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "sql": "# [自動為 olist_orders_dataset 生成] 系統已將 \"olist_orders_dataset\" 載入為 df\nprint(\"=== 1. 資料表維度 (筆數, 欄位數) ===\")\nprint(df.shape)\n\nprint(\"\\n=== 2. 檢查每個欄位的空值數量 ===\")\nprint(df.isnull().sum())\n\nprint(\"\\n=== 3. 檢查完全重複的紀錄筆數 ===\")\nprint(\"重複筆數:\", df.duplicated().sum())\n\nprint(\"\\n=== 4. 目標欄位 order_estimated_delivery_date 分佈前 10 項 ===\")\nprint(df['order_estimated_delivery_date'].value_counts(dropna=False).head(10))\n\n# 最後一行自動轉成右下角互動式統計表\ndf.describe().T.round(2)",
+      "note": "💡 【Python 自動體檢】\n一鍵檢查 `olist_orders_dataset` 的維度、缺失值、重複筆數與統計摘要！",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_orders_dataset_py_step2_heatmap",
+      "lang": "python",
+      "title": "【Python 視覺化 1】olist_orders_dataset 數值欄位相關性熱力圖 (Heatmap)",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "sql": "# [自動為 olist_orders_dataset 生成] 計算數值欄位相關係數並繪製熱力圖\nnum_df = df.select_dtypes(include=[np.number])\n\nif num_df.shape[1] >= 2:\n    # 若數值欄位超過 10 個，挑選與目標最相關的前 10 個繪圖以免擁擠\n    cols_to_plot = list(num_df.columns[:10])\n    if 'order_estimated_delivery_date' in num_df.columns:\n        corr_target = num_df.corr()['order_estimated_delivery_date'].abs().sort_values(ascending=False)\n        cols_to_plot = list(corr_target.index[:10])\n\n    plt.figure(figsize=(8.5, 6.5), dpi=130)\n    sns.heatmap(num_df[cols_to_plot].corr(), annot=True, fmt=\".2f\", cmap=\"coolwarm\", linewidths=1)\n    plt.title(\"olist_orders_dataset - 重點數值特徵相關係數熱力圖\", fontsize=12, fontweight=\"bold\", pad=12)\n    plt.tight_layout()\n    print(\"✅ 已完成相關性熱力圖繪製！\")\nelse:\n    print(\"⚠️ 數值型欄位不足 2 個，無法繪製相關性熱力圖。\")\n\nnum_df.corr().round(3) if num_df.shape[1] >= 2 else df.head(20)",
+      "note": "💡 【Python 相關性矩陣】\n自動挑選出 `olist_orders_dataset` 中與 `order_estimated_delivery_date` 最相關的數值特徵繪製熱力圖。",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_orders_dataset_py_step3_visual",
+      "lang": "python",
+      "title": "【Python 視覺化 2】關鍵特徵 () 分佈與對比圖",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "# [自動為 olist_orders_dataset 生成] 針對前 4 大關鍵數值特徵繪製分組箱型圖或分佈圖\nkey_cols = [c for c in [] if c in df.columns]\ntarget = 'order_estimated_delivery_date'\n\nif len(key_cols) > 0:\n    n = len(key_cols)\n    rows = 2 if n > 2 else 1\n    cols = 2 if n > 1 else 1\n    fig, axes = plt.subplots(rows, cols, figsize=(11, 3.6 * rows), dpi=130)\n    axes_list = np.array(axes).reshape(-1) if n > 1 else [axes]\n\n    # 若目標變數類別數 <= 8，畫分組箱型圖；否則畫散佈趨勢圖\n    is_cat_target = df[target].nunique() <= 8\n\n    for ax, col in zip(axes_list, key_cols):\n        if is_cat_target:\n            sns.boxplot(data=df, x=target, y=col, ax=ax, palette=\"Set2\", width=0.45)\n            ax.set_title(f\"{col} (依 {target} 分組箱型圖)\", fontsize=11, fontweight=\"bold\")\n        else:\n            sns.scatterplot(data=df.sample(min(len(df), 500), random_state=42), x=col, y=target, ax=ax, alpha=0.6)\n            ax.set_title(f\"{col} vs {target} 散佈圖\", fontsize=11, fontweight=\"bold\")\n\n    plt.tight_layout()\n    print(\"✅ 已繪製關鍵特徵對比圖！\")\ndf[key_cols + ([target] if target not in key_cols else [])].describe().T.round(2)",
+      "note": "💡 【Python 自動視覺化】\n系統會自動判斷 `order_estimated_delivery_date` 是分類型（畫分組箱型圖 Boxplot）還是連續數值型（畫散佈圖 Scatterplot）！",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_orders_dataset_py_step4_ml",
+      "lang": "python",
+      "title": "【Python 機器學習】自動訓練隨機森林找出影響 order_estimated_delivery_date 的特徵重要性排行",
+      "step_tag": "Step 4: 規則驗證 (Validate)",
+      "sql": "# [自動為 olist_orders_dataset 生成] 自動判別分類或迴歸任務，用隨機森林找出關鍵特徵\nfrom sklearn.ensemble import RandomForestClassifier, RandomForestRegressor\n\ntarget = 'order_estimated_delivery_date'\nclean_df = df.dropna(subset=[target]).copy()\n\n# 取出數值特徵並填補空值\nX = clean_df.drop(columns=[target]).select_dtypes(include=[np.number]).fillna(0)\ny = clean_df[target]\n\nif X.shape[1] > 0:\n    is_classification = (y.nunique() <= 15) or (y.dtype == 'object')\n    if is_classification:\n        model = RandomForestClassifier(n_estimators=100, random_state=42)\n        task_name = \"分類模型 (Classification)\"\n    else:\n        model = RandomForestRegressor(n_estimators=100, random_state=42)\n        task_name = \"迴歸模型 (Regression)\"\n\n    model.fit(X, y)\n    score = model.score(X, y)\n    print(f\"🎯 模型類型: {task_name}\")\n    print(f\"🎯 模型擬合分數 (Accuracy / R2): {score*100:.2f}%\")\n\n    imp_df = pd.DataFrame({\n        '特徵名稱': X.columns,\n        '重要性佔比(%)': (model.feature_importances_ * 100).round(2)\n    }).sort_values('重要性佔比(%)', ascending=True)\n\n    plt.figure(figsize=(8, max(4, len(X.columns)*0.35)), dpi=130)\n    colors = ['#e11d48' if v >= 10 else '#64748b' for v in imp_df['重要性佔比(%)']]\n    plt.barh(imp_df['特徵名稱'], imp_df['重要性佔比(%)'], color=colors, edgecolor='black')\n    plt.xlabel('隨機森林特徵重要性 (%)')\n    plt.title(f'影響 {target} 的關鍵特徵排行 ({table_name})', fontweight='bold')\n    plt.grid(axis='x', linestyle='--', alpha=0.5)\n    plt.tight_layout()\nelse:\n    imp_df = pd.DataFrame({'提示': ['無足夠數值特徵可供建模']})\n\nimp_df.sort_values('重要性佔比(%)', ascending=False) if '重要性佔比(%)' in imp_df.columns else imp_df",
+      "note": "💡 【通用機器學習特徵掃描】\n這段程式碼會自動判斷 `order_estimated_delivery_date` 是分類問題還是連續數值問題，並用隨機森林排出哪些欄位對 `order_estimated_delivery_date` 最具決定性影響力！",
+      "chart_config": {}
+    },
+    {
+      "id": "note_olist_sql_01",
+      "lang": "sql",
+      "title": "SQL 01｜從訂單明細開始讀資料",
+      "step_tag": "Olist SQL 多表實作",
+      "folder": "📚 Olist｜SQL 多表分析練習",
+      "sql": "SELECT order_id, customer_id, order_status,\n       order_purchase_timestamp, order_delivered_customer_date\nFROM olist_orders_dataset\nORDER BY order_purchase_timestamp\nLIMIT 20;",
+      "note": "目標：熟悉 SELECT、FROM、ORDER BY 與 LIMIT，認清一列代表一張訂單。\n讀結果：order_id 是訂單鍵；customer_id 可連到顧客表。日期以文字格式儲存，格式為 YYYY-MM-DD HH:MM:SS，因此 SQLite 的 date()、strftime() 可解析。\n動手改：把 LIMIT 20 改為 50；將排序改成 DESC，看最新訂單。\n檢查：部分訂單沒有實際送達日期，這是未送達或取消等狀態；不要直接當作資料損壞。",
+      "chart_config": {}
+    },
+    {
+      "id": "note_olist_sql_02",
+      "lang": "sql",
+      "title": "SQL 02｜訂單狀態與百分比分母",
+      "step_tag": "Olist SQL 多表實作",
+      "folder": "📚 Olist｜SQL 多表分析練習",
+      "sql": "SELECT order_status AS 訂單狀態,\n       COUNT(*) AS 訂單數,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM olist_orders_dataset), 2) AS 佔全部訂單百分比\nFROM olist_orders_dataset\nGROUP BY order_status\nORDER BY 訂單數 DESC;",
+      "note": "目標：用 GROUP BY 算各狀態的訂單數，並明確寫出百分比的分母。\n讀結果：delivered 是已送達，canceled 是取消；所有狀態的訂單數加總應為 99,441。這裡分母是全部訂單，因此各狀態百分比約加總為 100%。\n語法：COUNT(*) 計算每組筆數；100.0 讓除法保留小數；子查詢提供全表總數。\n動手改：增加 WHERE order_status <> 'delivered'，注意原查詢的分母仍是全部訂單。若想算「未送達各狀態內部佔比」，分母也要一起改。",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "訂單狀態",
+        "y1_col": "訂單數",
+        "y2_col": "佔全部訂單百分比"
+      }
+    },
+    {
+      "id": "note_olist_sql_03",
+      "lang": "sql",
+      "title": "SQL 03｜月度訂單趨勢",
+      "step_tag": "Olist SQL 多表實作",
+      "folder": "📚 Olist｜SQL 多表分析練習",
+      "sql": "SELECT strftime('%Y-%m', order_purchase_timestamp) AS 訂購月份,\n       COUNT(*) AS 訂單數,\n       SUM(CASE WHEN order_status = 'delivered' THEN 1 ELSE 0 END) AS 已送達數\nFROM olist_orders_dataset\nWHERE order_purchase_timestamp IS NOT NULL\nGROUP BY strftime('%Y-%m', order_purchase_timestamp)\nORDER BY 訂購月份;",
+      "note": "目標：用日期分組與條件計數看訂單量變化。\n讀結果：訂單數包含所有狀態；已送達數只數 delivered。兩條線的差距反映資料截取時還未送達、取消等情形，不能直接當作物流失敗率。\n語法：strftime('%Y-%m', 日期) 取得月份；SUM(CASE WHEN ...) 是條件計數。\n動手改：WHERE 限制在 2017-01 到 2018-08 的完整月份，再看趨勢。資料首尾月份不完整，不宜直接比較月增率。",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "訂購月份",
+        "y1_col": "訂單數",
+        "y2_col": "已送達數"
+      }
+    },
+    {
+      "id": "note_olist_sql_04",
+      "lang": "sql",
+      "title": "SQL 04｜交貨時間與準時率",
+      "step_tag": "Olist SQL 多表實作",
+      "folder": "📚 Olist｜SQL 多表分析練習",
+      "sql": "SELECT strftime('%Y-%m', order_purchase_timestamp) AS 訂購月份,\n       COUNT(*) AS 已送達訂單數,\n       ROUND(AVG(julianday(order_delivered_customer_date) -\n                 julianday(order_purchase_timestamp)), 2) AS 平均交貨天數,\n       ROUND(AVG(CASE WHEN date(order_delivered_customer_date) <= date(order_estimated_delivery_date)\n                      THEN 1.0 ELSE 0.0 END) * 100, 2) AS 準時率百分比\nFROM olist_orders_dataset\nWHERE order_status = 'delivered'\n  AND order_delivered_customer_date IS NOT NULL\n  AND order_estimated_delivery_date IS NOT NULL\nGROUP BY strftime('%Y-%m', order_purchase_timestamp)\nORDER BY 訂購月份;",
+      "note": "目標：練習日期相減、條件比例與 WHERE 過濾。\n讀結果：平均交貨天數從購買到實際送達；準時率比較「送達日」與「預計送達日」。結果只含已送達且兩個日期完整的訂單。\n語法：SQLite 的 julianday() 差值單位為天；date() 忽略時分秒，適合用日期判斷是否準時。\n動手改：改成 GROUP BY 顧客州別，需先 JOIN 顧客表，並看每州樣本數。\n提醒：預計送達日是資料中的承諾日期，不等同全公司的統一服務標準。",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "訂購月份",
+        "y1_col": "平均交貨天數",
+        "y2_col": "已送達訂單數"
+      }
+    },
+    {
+      "id": "note_olist_sql_05",
+      "lang": "sql",
+      "title": "SQL 05｜JOIN 顧客表看州別訂單",
+      "step_tag": "Olist SQL 多表實作",
+      "folder": "📚 Olist｜SQL 多表分析練習",
+      "sql": "SELECT c.customer_state AS 顧客州別,\n       COUNT(*) AS 訂單數,\n       COUNT(DISTINCT c.customer_unique_id) AS 不重複顧客數\nFROM olist_orders_dataset AS o\nJOIN olist_customers_dataset AS c ON o.customer_id = c.customer_id\nGROUP BY c.customer_state\nORDER BY 訂單數 DESC\nLIMIT 15;",
+      "note": "目標：學第一個一對一 JOIN，並區分「訂單數」與「不重複顧客數」。\n關聯：orders.customer_id → customers.customer_id；customer_unique_id 才用來辨識跨訂單的同一顧客。\n讀結果：顧客州別指收件顧客，不是賣家所在地。各州訂單數相加應接近訂單表筆數；若不符，檢查 JOIN 缺鍵。\n動手改：改成按 customer_state 排序，觀察各州訂單數落差；再試 COUNT(DISTINCT o.order_id) 核對訂單數。",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "顧客州別",
+        "y1_col": "訂單數",
+        "y2_col": "不重複顧客數"
+      }
+    },
+    {
+      "id": "note_olist_sql_06",
+      "lang": "sql",
+      "title": "SQL 06｜訂單商品金額與運費",
+      "step_tag": "Olist SQL 多表實作",
+      "folder": "📚 Olist｜SQL 多表分析練習",
+      "sql": "SELECT o.order_id AS 訂單編號,\n       COUNT(*) AS 商品明細列數,\n       ROUND(SUM(i.price), 2) AS 商品小計,\n       ROUND(SUM(i.freight_value), 2) AS 運費合計,\n       ROUND(SUM(i.price + i.freight_value), 2) AS 商品加運費\nFROM olist_orders_dataset AS o\nJOIN olist_order_items_dataset AS i ON o.order_id = i.order_id\nWHERE o.order_status = 'delivered'\nGROUP BY o.order_id\nORDER BY 商品加運費 DESC\nLIMIT 20;",
+      "note": "目標：理解一筆訂單可有多筆商品明細；先回到每單一列，再比較金額。\n關聯：orders.order_id → order_items.order_id。一筆明細的 price 是該明細價格，freight_value 是其運費；SUM 後才得到整單小計。\n讀結果：商品明細列數大於 1 的訂單，不能直接從單筆明細推估整單金額。\n動手改：移除 LIMIT，將 ORDER BY 改成商品明細列數 DESC，觀察多商品訂單。\n提醒：這是商品與運費的加總，不包含退款或平台成本，也不是利潤。",
+      "chart_config": {}
+    },
+    {
+      "id": "note_olist_sql_07",
+      "lang": "sql",
+      "title": "SQL 07｜商品類別銷售排行",
+      "step_tag": "Olist SQL 多表實作",
+      "folder": "📚 Olist｜SQL 多表分析練習",
+      "sql": "SELECT COALESCE(t.product_category_name_english,\n                p.product_category_name, 'unknown') AS 商品類別,\n       COUNT(*) AS 明細列數,\n       ROUND(SUM(i.price), 2) AS 商品銷售額\nFROM olist_order_items_dataset AS i\nJOIN olist_orders_dataset AS o ON i.order_id = o.order_id\nJOIN olist_products_dataset AS p ON i.product_id = p.product_id\nLEFT JOIN product_category_name_translation AS t\n       ON p.product_category_name = t.product_category_name\nWHERE o.order_status = 'delivered'\nGROUP BY COALESCE(t.product_category_name_english, p.product_category_name, 'unknown')\nORDER BY 商品銷售額 DESC\nLIMIT 15;",
+      "note": "目標：串接訂單、明細、商品與類別翻譯四張表，回答哪些類別的商品銷售額最高。\n關聯：items.product_id → products.product_id；products.product_category_name → translation.product_category_name。\n語法：LEFT JOIN 保留沒有翻譯的商品；COALESCE 依序取英文、葡文或 unknown。\n讀結果：SUM(price) 是已送達商品明細的價格，不含運費。COUNT(*) 是明細列數，不是訂單數；若要訂單數，使用 COUNT(DISTINCT i.order_id)。\n動手改：同時顯示 COUNT(DISTINCT i.order_id)，比較「明細列數」與「訂單數」。",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "商品類別",
+        "y1_col": "商品銷售額",
+        "y2_col": "明細列數"
+      }
+    },
+    {
+      "id": "note_olist_sql_08",
+      "lang": "sql",
+      "title": "SQL 08｜付款方式：一列不是一張訂單",
+      "step_tag": "Olist SQL 多表實作",
+      "folder": "📚 Olist｜SQL 多表分析練習",
+      "sql": "SELECT payment_type AS 付款方式,\n       COUNT(*) AS 付款紀錄數,\n       COUNT(DISTINCT order_id) AS 涉及訂單數,\n       ROUND(SUM(payment_value), 2) AS 付款總額\nFROM olist_order_payments_dataset\nGROUP BY payment_type\nORDER BY 付款總額 DESC;",
+      "note": "目標：辨認資料粒度。付款表一列是一筆付款紀錄，同一訂單可能有多筆付款。\n讀結果：付款紀錄數與涉及訂單數不同，說明不能用 COUNT(*) 直接說有多少張訂單。不同付款方式的涉及訂單數相加，也可能高於全體訂單數，因為一張訂單可用多種付款方式。\n語法：COUNT(DISTINCT order_id) 在每組內去除重複訂單；SUM(payment_value) 計付款金額。\n動手改：加入 AVG(payment_value)，比較每筆付款紀錄平均金額。它不是平均訂單金額。",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "付款方式",
+        "y1_col": "付款總額",
+        "y2_col": "涉及訂單數"
+      }
+    },
+    {
+      "id": "note_olist_sql_09",
+      "lang": "sql",
+      "title": "SQL 09｜先彙總再 JOIN：避免金額膨脹",
+      "step_tag": "Olist SQL 多表實作",
+      "folder": "📚 Olist｜SQL 多表分析練習",
+      "sql": "WITH item_totals AS (\n    SELECT order_id, SUM(price) AS 商品小計, SUM(freight_value) AS 運費\n    FROM olist_order_items_dataset GROUP BY order_id\n), payment_totals AS (\n    SELECT order_id, SUM(payment_value) AS 付款合計\n    FROM olist_order_payments_dataset GROUP BY order_id\n)\nSELECT o.order_id AS 訂單編號,\n       ROUND(i.商品小計 + i.運費, 2) AS 商品加運費,\n       ROUND(p.付款合計, 2) AS 付款合計,\n       ROUND(p.付款合計 - i.商品小計 - i.運費, 2) AS 金額差\nFROM olist_orders_dataset AS o\nJOIN item_totals AS i ON o.order_id = i.order_id\nJOIN payment_totals AS p ON o.order_id = p.order_id\nWHERE o.order_status = 'delivered'\nORDER BY ABS(p.付款合計 - i.商品小計 - i.運費) DESC\nLIMIT 20;",
+      "note": "目標：學會多張一對多表的安全 JOIN。items 和 payments 都可能對同一 order_id 有多列；直接把兩張明細表 JOIN，會產生相乘列數並重複計算金額。\n方法：兩個 CTE 各先 GROUP BY order_id，變成每單一列，再 JOIN 訂單表。\n讀結果：金額差用來核對付款與商品加運費；若有差異，要再查訂單狀態、資料缺漏或業務規則，不能直接叫作利潤。\n動手改：在 item_totals 與 payment_totals 加 COUNT(*)，找出多商品且多次付款的訂單；再試原始明細直接 JOIN，比較列數如何膨脹。",
+      "chart_config": {}
+    },
+    {
+      "id": "note_olist_sql_10",
+      "lang": "sql",
+      "title": "SQL 10｜評價分數與交貨延遲",
+      "step_tag": "Olist SQL 多表實作",
+      "folder": "📚 Olist｜SQL 多表分析練習",
+      "sql": "WITH review_by_order AS (\n    SELECT order_id, AVG(review_score) AS 平均評分\n    FROM olist_order_reviews_dataset\n    GROUP BY order_id\n), delivery AS (\n    SELECT o.order_id,\n           CASE WHEN date(o.order_delivered_customer_date) > date(o.order_estimated_delivery_date)\n                THEN '晚到' ELSE '準時或提早' END AS 交貨類別,\n           r.平均評分\n    FROM olist_orders_dataset AS o\n    JOIN review_by_order AS r ON o.order_id = r.order_id\n    WHERE o.order_status = 'delivered'\n      AND o.order_delivered_customer_date IS NOT NULL\n      AND o.order_estimated_delivery_date IS NOT NULL\n)\nSELECT 交貨類別, COUNT(*) AS 有評價訂單數,\n       ROUND(AVG(平均評分), 2) AS 平均評價分數\nFROM delivery\nGROUP BY 交貨類別\nORDER BY 交貨類別;",
+      "note": "目標：練習先處理可能重複的評價，再比較準時與晚到訂單的分數。\n方法：review_by_order 先變成每單一列；交貨類別只對已送達且日期完整的訂單判定。\n讀結果：每組的「有評價訂單數」是有評價且符合條件的訂單，不是所有訂單；平均評價分數是 1～5 分。\n動手改：增加按顧客州別分組，但先確認每組樣本數，避免小樣本被誤讀。\n提醒：晚到與低分若同時出現，只能說有關聯；不能從觀察資料直接證明晚到是唯一原因。",
+      "chart_config": {}
+    },
+    {
+      "id": "note_olist_sql_11",
+      "lang": "sql",
+      "title": "SQL 11｜賣家州別與商品銷售額",
+      "step_tag": "Olist SQL 多表實作",
+      "folder": "📚 Olist｜SQL 多表分析練習",
+      "sql": "SELECT s.seller_state AS 賣家州別,\n       COUNT(DISTINCT i.seller_id) AS 賣家數,\n       COUNT(*) AS 商品明細列數,\n       ROUND(SUM(i.price), 2) AS 商品銷售額\nFROM olist_order_items_dataset AS i\nJOIN olist_sellers_dataset AS s ON i.seller_id = s.seller_id\nJOIN olist_orders_dataset AS o ON i.order_id = o.order_id\nWHERE o.order_status = 'delivered'\nGROUP BY s.seller_state\nORDER BY 商品銷售額 DESC\nLIMIT 15;",
+      "note": "目標：從商品明細連到賣家表，練習辨認賣家所在地與顧客所在地。\n讀結果：賣家數是州內不同 seller_id 的數量；商品銷售額是已送達明細的 SUM(price)。這不是州內居民的消費額，也不是賣家淨收入。\n語法：COUNT(DISTINCT i.seller_id) 防止同一賣家多筆商品被重複算成多個賣家。\n動手改：與第 5 課顧客州別訂單量比較，看看買方與賣方地理分布是否不同。",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "賣家州別",
+        "y1_col": "商品銷售額",
+        "y2_col": "賣家數"
+      }
+    },
+    {
+      "id": "note_olist_sql_12",
+      "lang": "sql",
+      "title": "SQL 12｜回購顧客排行與視窗函數",
+      "step_tag": "Olist SQL 多表實作",
+      "folder": "📚 Olist｜SQL 多表分析練習",
+      "sql": "WITH orders_per_customer AS (\n    SELECT c.customer_unique_id,\n           COUNT(DISTINCT o.order_id) AS 訂單數,\n           ROUND(SUM(i.price), 2) AS 商品消費額\n    FROM olist_customers_dataset AS c\n    JOIN olist_orders_dataset AS o ON c.customer_id = o.customer_id\n    JOIN olist_order_items_dataset AS i ON o.order_id = i.order_id\n    WHERE o.order_status = 'delivered'\n    GROUP BY c.customer_unique_id\n)\nSELECT ROW_NUMBER() OVER (ORDER BY 商品消費額 DESC) AS 名次,\n       customer_unique_id AS 顧客唯一編號,\n       訂單數, 商品消費額\nFROM orders_per_customer\nWHERE 訂單數 >= 2\nORDER BY 商品消費額 DESC\nLIMIT 20;",
+      "note": "目標：以 customer_unique_id 辨識跨訂單顧客，找出有回購的顧客並練習視窗函數。\n關聯：customers.customer_id → orders.customer_id → items.order_id。customer_id 在這份資料中對應訂單層級的顧客資料；跨訂單識別要用 customer_unique_id。\n語法：COUNT(DISTINCT o.order_id) 算訂單數，SUM(i.price) 算商品消費額；ROW_NUMBER() 依消費額給名次。\n讀結果：只顯示訂單數至少 2 的顧客；商品消費額不含運費、退款或成本。\n動手改：把至少 2 單改成至少 3 單，看回購顧客數與排行如何變化。",
+      "chart_config": {}
+    }
+  ],
+  "olist_products_dataset": [
+    {
+      "id": "olist_products_dataset_sql_step1",
+      "lang": "sql",
+      "title": "【Step 1 看主角】檢查 product_width_cm 的分佈與比例",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "sql": "-- [自動為 olist_products_dataset 生成] 檢查主角欄位 product_width_cm 的各類別筆數與佔比\nSELECT \n    \"product_width_cm\",\n    COUNT(*) AS 筆數,\n    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM \"olist_products_dataset\"), 2) AS 佔比百分比\nFROM \"olist_products_dataset\"\nGROUP BY \"product_width_cm\"\nORDER BY 筆數 DESC\nLIMIT 30;",
+      "note": "💡 【專案 `olist_products_dataset` - Step 1】\n系統已自動將目標欄位設為 `product_width_cm`。先觀察各類別筆數與佔比是否平衡！",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "product_width_cm",
+        "y1_col": "筆數",
+        "y2_col": "佔比百分比"
+      }
+    },
+    {
+      "id": "olist_products_dataset_sql_step2",
+      "lang": "sql",
+      "title": "【Step 2 全表比較】依 product_width_cm 分組比較關鍵指標平均值",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "sql": "-- [自動為 olist_products_dataset 生成] 比較不同 product_width_cm 分組下的關鍵數值指標平均差異\nSELECT \n    \"product_width_cm\",\n    COUNT(*) AS 樣本數,\n    ROUND(AVG(\"product_length_cm\"), 2) AS \"平均_product_length_cm\",\n    ROUND(AVG(\"product_weight_g\"), 2) AS \"平均_product_weight_g\",\n    ROUND(AVG(\"product_height_cm\"), 2) AS \"平均_product_height_cm\",\n    ROUND(AVG(\"product_name_lenght\"), 2) AS \"平均_product_name_lenght\"\nFROM \"olist_products_dataset\"\nGROUP BY \"product_width_cm\"\nORDER BY \"product_width_cm\"\nLIMIT 20;",
+      "note": "💡 【專案 `olist_products_dataset` - Step 2】\n系統已自動挑選出與 `product_width_cm` 最相關的前幾個數值欄位：product_length_cm, product_weight_g, product_height_cm, product_name_lenght，比較它們在不同分組下的平均值差異。",
+      "chart_config": {
+        "type": "grouped_bar",
+        "x_col": "product_width_cm",
+        "y1_col": "平均_product_length_cm",
+        "y2_col": "平均_product_weight_g"
+      }
+    },
+    {
+      "id": "olist_products_dataset_sql_step3_f1",
+      "lang": "sql",
+      "title": "【Step 3 找分界線 A】頭號關鍵欄位 product_length_cm 對 product_width_cm 的影響",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "-- 針對關鍵欄位 product_length_cm 自動切區間，觀察對 product_width_cm 的影響\nSELECT \n    CAST(ROUND(\"product_length_cm\" / 12) * 12 AS TEXT) AS \"product_length_cm_區間\",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG(\"product_width_cm\"), 2) AS \"product_width_cm_平均值\"\nFROM \"olist_products_dataset\"\nGROUP BY ROUND(\"product_length_cm\" / 12) * 12\nORDER BY ROUND(\"product_length_cm\" / 12) * 12;",
+      "note": "💡 【專案 `olist_products_dataset` - Step 3-A】\n`product_length_cm` 是目前與 `product_width_cm` 相關度排名第 1 的特徵。請觀察左下方雙軸圖中紅色折線（product_width_cm_平均值）隨 `product_length_cm` 變化的轉折點！",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "product_length_cm_區間",
+        "y1_col": "product_width_cm_平均值",
+        "y2_col": "總筆數"
+      }
+    },
+    {
+      "id": "olist_products_dataset_sql_step3_f2",
+      "lang": "sql",
+      "title": "【Step 3 找分界線 B】第二關鍵欄位 product_weight_g 對 product_width_cm 的影響",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "-- 針對第二關鍵欄位 product_weight_g 自動切區間，觀察對 product_width_cm 的影響\nSELECT \n    CAST(ROUND(\"product_weight_g\" / 5053) * 5053 AS TEXT) AS \"product_weight_g_區間\",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG(\"product_width_cm\"), 2) AS \"product_width_cm_平均值\"\nFROM \"olist_products_dataset\"\nGROUP BY ROUND(\"product_weight_g\" / 5053) * 5053\nORDER BY ROUND(\"product_weight_g\" / 5053) * 5053;",
+      "note": "💡 【專案 `olist_products_dataset` - Step 3-B】\n觀察排名第 2 的特徵 `product_weight_g` 在各區間下對 `product_width_cm` 的影響趨勢。",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "product_weight_g_區間",
+        "y1_col": "product_width_cm_平均值",
+        "y2_col": "總筆數"
+      }
+    },
+    {
+      "id": "olist_products_dataset_py_step1_check",
+      "lang": "python",
+      "title": "【Python 基礎 1】olist_products_dataset 數據體檢三連發 (空值 / 重複 / describe)",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "sql": "# [自動為 olist_products_dataset 生成] 系統已將 \"olist_products_dataset\" 載入為 df\nprint(\"=== 1. 資料表維度 (筆數, 欄位數) ===\")\nprint(df.shape)\n\nprint(\"\\n=== 2. 檢查每個欄位的空值數量 ===\")\nprint(df.isnull().sum())\n\nprint(\"\\n=== 3. 檢查完全重複的紀錄筆數 ===\")\nprint(\"重複筆數:\", df.duplicated().sum())\n\nprint(\"\\n=== 4. 目標欄位 product_width_cm 分佈前 10 項 ===\")\nprint(df['product_width_cm'].value_counts(dropna=False).head(10))\n\n# 最後一行自動轉成右下角互動式統計表\ndf.describe().T.round(2)",
+      "note": "💡 【Python 自動體檢】\n一鍵檢查 `olist_products_dataset` 的維度、缺失值、重複筆數與統計摘要！",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_products_dataset_py_step2_heatmap",
+      "lang": "python",
+      "title": "【Python 視覺化 1】olist_products_dataset 數值欄位相關性熱力圖 (Heatmap)",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "sql": "# [自動為 olist_products_dataset 生成] 計算數值欄位相關係數並繪製熱力圖\nnum_df = df.select_dtypes(include=[np.number])\n\nif num_df.shape[1] >= 2:\n    # 若數值欄位超過 10 個，挑選與目標最相關的前 10 個繪圖以免擁擠\n    cols_to_plot = list(num_df.columns[:10])\n    if 'product_width_cm' in num_df.columns:\n        corr_target = num_df.corr()['product_width_cm'].abs().sort_values(ascending=False)\n        cols_to_plot = list(corr_target.index[:10])\n\n    plt.figure(figsize=(8.5, 6.5), dpi=130)\n    sns.heatmap(num_df[cols_to_plot].corr(), annot=True, fmt=\".2f\", cmap=\"coolwarm\", linewidths=1)\n    plt.title(\"olist_products_dataset - 重點數值特徵相關係數熱力圖\", fontsize=12, fontweight=\"bold\", pad=12)\n    plt.tight_layout()\n    print(\"✅ 已完成相關性熱力圖繪製！\")\nelse:\n    print(\"⚠️ 數值型欄位不足 2 個，無法繪製相關性熱力圖。\")\n\nnum_df.corr().round(3) if num_df.shape[1] >= 2 else df.head(20)",
+      "note": "💡 【Python 相關性矩陣】\n自動挑選出 `olist_products_dataset` 中與 `product_width_cm` 最相關的數值特徵繪製熱力圖。",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_products_dataset_py_step3_visual",
+      "lang": "python",
+      "title": "【Python 視覺化 2】關鍵特徵 (product_length_cm, product_weight_g, product_height_cm, product_name_lenght) 分佈與對比圖",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "# [自動為 olist_products_dataset 生成] 針對前 4 大關鍵數值特徵繪製分組箱型圖或分佈圖\nkey_cols = [c for c in ['product_length_cm', 'product_weight_g', 'product_height_cm', 'product_name_lenght'] if c in df.columns]\ntarget = 'product_width_cm'\n\nif len(key_cols) > 0:\n    n = len(key_cols)\n    rows = 2 if n > 2 else 1\n    cols = 2 if n > 1 else 1\n    fig, axes = plt.subplots(rows, cols, figsize=(11, 3.6 * rows), dpi=130)\n    axes_list = np.array(axes).reshape(-1) if n > 1 else [axes]\n\n    # 若目標變數類別數 <= 8，畫分組箱型圖；否則畫散佈趨勢圖\n    is_cat_target = df[target].nunique() <= 8\n\n    for ax, col in zip(axes_list, key_cols):\n        if is_cat_target:\n            sns.boxplot(data=df, x=target, y=col, ax=ax, palette=\"Set2\", width=0.45)\n            ax.set_title(f\"{col} (依 {target} 分組箱型圖)\", fontsize=11, fontweight=\"bold\")\n        else:\n            sns.scatterplot(data=df.sample(min(len(df), 500), random_state=42), x=col, y=target, ax=ax, alpha=0.6)\n            ax.set_title(f\"{col} vs {target} 散佈圖\", fontsize=11, fontweight=\"bold\")\n\n    plt.tight_layout()\n    print(\"✅ 已繪製關鍵特徵對比圖！\")\ndf[key_cols + ([target] if target not in key_cols else [])].describe().T.round(2)",
+      "note": "💡 【Python 自動視覺化】\n系統會自動判斷 `product_width_cm` 是分類型（畫分組箱型圖 Boxplot）還是連續數值型（畫散佈圖 Scatterplot）！",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_products_dataset_py_step4_ml",
+      "lang": "python",
+      "title": "【Python 機器學習】自動訓練隨機森林找出影響 product_width_cm 的特徵重要性排行",
+      "step_tag": "Step 4: 規則驗證 (Validate)",
+      "sql": "# [自動為 olist_products_dataset 生成] 自動判別分類或迴歸任務，用隨機森林找出關鍵特徵\nfrom sklearn.ensemble import RandomForestClassifier, RandomForestRegressor\n\ntarget = 'product_width_cm'\nclean_df = df.dropna(subset=[target]).copy()\n\n# 取出數值特徵並填補空值\nX = clean_df.drop(columns=[target]).select_dtypes(include=[np.number]).fillna(0)\ny = clean_df[target]\n\nif X.shape[1] > 0:\n    is_classification = (y.nunique() <= 15) or (y.dtype == 'object')\n    if is_classification:\n        model = RandomForestClassifier(n_estimators=100, random_state=42)\n        task_name = \"分類模型 (Classification)\"\n    else:\n        model = RandomForestRegressor(n_estimators=100, random_state=42)\n        task_name = \"迴歸模型 (Regression)\"\n\n    model.fit(X, y)\n    score = model.score(X, y)\n    print(f\"🎯 模型類型: {task_name}\")\n    print(f\"🎯 模型擬合分數 (Accuracy / R2): {score*100:.2f}%\")\n\n    imp_df = pd.DataFrame({\n        '特徵名稱': X.columns,\n        '重要性佔比(%)': (model.feature_importances_ * 100).round(2)\n    }).sort_values('重要性佔比(%)', ascending=True)\n\n    plt.figure(figsize=(8, max(4, len(X.columns)*0.35)), dpi=130)\n    colors = ['#e11d48' if v >= 10 else '#64748b' for v in imp_df['重要性佔比(%)']]\n    plt.barh(imp_df['特徵名稱'], imp_df['重要性佔比(%)'], color=colors, edgecolor='black')\n    plt.xlabel('隨機森林特徵重要性 (%)')\n    plt.title(f'影響 {target} 的關鍵特徵排行 ({table_name})', fontweight='bold')\n    plt.grid(axis='x', linestyle='--', alpha=0.5)\n    plt.tight_layout()\nelse:\n    imp_df = pd.DataFrame({'提示': ['無足夠數值特徵可供建模']})\n\nimp_df.sort_values('重要性佔比(%)', ascending=False) if '重要性佔比(%)' in imp_df.columns else imp_df",
+      "note": "💡 【通用機器學習特徵掃描】\n這段程式碼會自動判斷 `product_width_cm` 是分類問題還是連續數值問題，並用隨機森林排出哪些欄位對 `product_width_cm` 最具決定性影響力！",
+      "chart_config": {}
+    }
+  ],
+  "olist_sellers_dataset": [
+    {
+      "id": "olist_sellers_dataset_sql_step1",
+      "lang": "sql",
+      "title": "【Step 1 看主角】檢查 seller_state 的分佈與比例",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "sql": "-- [自動為 olist_sellers_dataset 生成] 檢查主角欄位 seller_state 的各類別筆數與佔比\nSELECT \n    \"seller_state\",\n    COUNT(*) AS 筆數,\n    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM \"olist_sellers_dataset\"), 2) AS 佔比百分比\nFROM \"olist_sellers_dataset\"\nGROUP BY \"seller_state\"\nORDER BY 筆數 DESC\nLIMIT 30;",
+      "note": "💡 【專案 `olist_sellers_dataset` - Step 1】\n系統已自動將目標欄位設為 `seller_state`。先觀察各類別筆數與佔比是否平衡！",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "seller_state",
+        "y1_col": "筆數",
+        "y2_col": "佔比百分比"
+      }
+    },
+    {
+      "id": "olist_sellers_dataset_sql_step2",
+      "lang": "sql",
+      "title": "【Step 2 全表比較】依 seller_state 分組比較關鍵指標平均值",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "sql": "-- [自動為 olist_sellers_dataset 生成] 比較不同 seller_state 分組下的關鍵數值指標平均差異\nSELECT \n    \"seller_state\",\n    COUNT(*) AS 樣本數,\n    ROUND(AVG(\"seller_zip_code_prefix\"), 2) AS \"平均_seller_zip_code_prefix\"\nFROM \"olist_sellers_dataset\"\nGROUP BY \"seller_state\"\nORDER BY \"seller_state\"\nLIMIT 20;",
+      "note": "💡 【專案 `olist_sellers_dataset` - Step 2】\n系統已自動挑選出與 `seller_state` 最相關的前幾個數值欄位：seller_zip_code_prefix，比較它們在不同分組下的平均值差異。",
+      "chart_config": {
+        "type": "grouped_bar",
+        "x_col": "seller_state",
+        "y1_col": "平均_seller_zip_code_prefix",
+        "y2_col": ""
+      }
+    },
+    {
+      "id": "olist_sellers_dataset_sql_step3_f1",
+      "lang": "sql",
+      "title": "【Step 3 找分界線 A】頭號關鍵欄位 seller_zip_code_prefix 對 seller_state 的影響",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "-- 針對關鍵欄位 seller_zip_code_prefix 自動切區間，觀察對 seller_state 的影響\nSELECT \n    CAST(ROUND(\"seller_zip_code_prefix\" / 12341) * 12341 AS TEXT) AS \"seller_zip_code_prefix_區間\",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG(\"seller_state\"), 2) AS \"seller_state_平均值\"\nFROM \"olist_sellers_dataset\"\nGROUP BY ROUND(\"seller_zip_code_prefix\" / 12341) * 12341\nORDER BY ROUND(\"seller_zip_code_prefix\" / 12341) * 12341;",
+      "note": "💡 【專案 `olist_sellers_dataset` - Step 3-A】\n`seller_zip_code_prefix` 是目前與 `seller_state` 相關度排名第 1 的特徵。請觀察左下方雙軸圖中紅色折線（seller_state_平均值）隨 `seller_zip_code_prefix` 變化的轉折點！",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "seller_zip_code_prefix_區間",
+        "y1_col": "seller_state_平均值",
+        "y2_col": "總筆數"
+      }
+    },
+    {
+      "id": "olist_sellers_dataset_sql_step3_f2",
+      "lang": "sql",
+      "title": "【Step 3 找分界線 B】第二關鍵欄位 seller_zip_code_prefix 對 seller_state 的影響",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "-- 針對第二關鍵欄位 seller_zip_code_prefix 自動切區間，觀察對 seller_state 的影響\nSELECT \n    CAST(ROUND(\"seller_zip_code_prefix\" / 12341) * 12341 AS TEXT) AS \"seller_zip_code_prefix_區間\",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG(\"seller_state\"), 2) AS \"seller_state_平均值\"\nFROM \"olist_sellers_dataset\"\nGROUP BY ROUND(\"seller_zip_code_prefix\" / 12341) * 12341\nORDER BY ROUND(\"seller_zip_code_prefix\" / 12341) * 12341;",
+      "note": "💡 【專案 `olist_sellers_dataset` - Step 3-B】\n觀察排名第 2 的特徵 `seller_zip_code_prefix` 在各區間下對 `seller_state` 的影響趨勢。",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "seller_zip_code_prefix_區間",
+        "y1_col": "seller_state_平均值",
+        "y2_col": "總筆數"
+      }
+    },
+    {
+      "id": "olist_sellers_dataset_py_step1_check",
+      "lang": "python",
+      "title": "【Python 基礎 1】olist_sellers_dataset 數據體檢三連發 (空值 / 重複 / describe)",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "sql": "# [自動為 olist_sellers_dataset 生成] 系統已將 \"olist_sellers_dataset\" 載入為 df\nprint(\"=== 1. 資料表維度 (筆數, 欄位數) ===\")\nprint(df.shape)\n\nprint(\"\\n=== 2. 檢查每個欄位的空值數量 ===\")\nprint(df.isnull().sum())\n\nprint(\"\\n=== 3. 檢查完全重複的紀錄筆數 ===\")\nprint(\"重複筆數:\", df.duplicated().sum())\n\nprint(\"\\n=== 4. 目標欄位 seller_state 分佈前 10 項 ===\")\nprint(df['seller_state'].value_counts(dropna=False).head(10))\n\n# 最後一行自動轉成右下角互動式統計表\ndf.describe().T.round(2)",
+      "note": "💡 【Python 自動體檢】\n一鍵檢查 `olist_sellers_dataset` 的維度、缺失值、重複筆數與統計摘要！",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_sellers_dataset_py_step2_heatmap",
+      "lang": "python",
+      "title": "【Python 視覺化 1】olist_sellers_dataset 數值欄位相關性熱力圖 (Heatmap)",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "sql": "# [自動為 olist_sellers_dataset 生成] 計算數值欄位相關係數並繪製熱力圖\nnum_df = df.select_dtypes(include=[np.number])\n\nif num_df.shape[1] >= 2:\n    # 若數值欄位超過 10 個，挑選與目標最相關的前 10 個繪圖以免擁擠\n    cols_to_plot = list(num_df.columns[:10])\n    if 'seller_state' in num_df.columns:\n        corr_target = num_df.corr()['seller_state'].abs().sort_values(ascending=False)\n        cols_to_plot = list(corr_target.index[:10])\n\n    plt.figure(figsize=(8.5, 6.5), dpi=130)\n    sns.heatmap(num_df[cols_to_plot].corr(), annot=True, fmt=\".2f\", cmap=\"coolwarm\", linewidths=1)\n    plt.title(\"olist_sellers_dataset - 重點數值特徵相關係數熱力圖\", fontsize=12, fontweight=\"bold\", pad=12)\n    plt.tight_layout()\n    print(\"✅ 已完成相關性熱力圖繪製！\")\nelse:\n    print(\"⚠️ 數值型欄位不足 2 個，無法繪製相關性熱力圖。\")\n\nnum_df.corr().round(3) if num_df.shape[1] >= 2 else df.head(20)",
+      "note": "💡 【Python 相關性矩陣】\n自動挑選出 `olist_sellers_dataset` 中與 `seller_state` 最相關的數值特徵繪製熱力圖。",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_sellers_dataset_py_step3_visual",
+      "lang": "python",
+      "title": "【Python 視覺化 2】關鍵特徵 (seller_zip_code_prefix) 分佈與對比圖",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "# [自動為 olist_sellers_dataset 生成] 針對前 4 大關鍵數值特徵繪製分組箱型圖或分佈圖\nkey_cols = [c for c in ['seller_zip_code_prefix'] if c in df.columns]\ntarget = 'seller_state'\n\nif len(key_cols) > 0:\n    n = len(key_cols)\n    rows = 2 if n > 2 else 1\n    cols = 2 if n > 1 else 1\n    fig, axes = plt.subplots(rows, cols, figsize=(11, 3.6 * rows), dpi=130)\n    axes_list = np.array(axes).reshape(-1) if n > 1 else [axes]\n\n    # 若目標變數類別數 <= 8，畫分組箱型圖；否則畫散佈趨勢圖\n    is_cat_target = df[target].nunique() <= 8\n\n    for ax, col in zip(axes_list, key_cols):\n        if is_cat_target:\n            sns.boxplot(data=df, x=target, y=col, ax=ax, palette=\"Set2\", width=0.45)\n            ax.set_title(f\"{col} (依 {target} 分組箱型圖)\", fontsize=11, fontweight=\"bold\")\n        else:\n            sns.scatterplot(data=df.sample(min(len(df), 500), random_state=42), x=col, y=target, ax=ax, alpha=0.6)\n            ax.set_title(f\"{col} vs {target} 散佈圖\", fontsize=11, fontweight=\"bold\")\n\n    plt.tight_layout()\n    print(\"✅ 已繪製關鍵特徵對比圖！\")\ndf[key_cols + ([target] if target not in key_cols else [])].describe().T.round(2)",
+      "note": "💡 【Python 自動視覺化】\n系統會自動判斷 `seller_state` 是分類型（畫分組箱型圖 Boxplot）還是連續數值型（畫散佈圖 Scatterplot）！",
+      "chart_config": {}
+    },
+    {
+      "id": "olist_sellers_dataset_py_step4_ml",
+      "lang": "python",
+      "title": "【Python 機器學習】自動訓練隨機森林找出影響 seller_state 的特徵重要性排行",
+      "step_tag": "Step 4: 規則驗證 (Validate)",
+      "sql": "# [自動為 olist_sellers_dataset 生成] 自動判別分類或迴歸任務，用隨機森林找出關鍵特徵\nfrom sklearn.ensemble import RandomForestClassifier, RandomForestRegressor\n\ntarget = 'seller_state'\nclean_df = df.dropna(subset=[target]).copy()\n\n# 取出數值特徵並填補空值\nX = clean_df.drop(columns=[target]).select_dtypes(include=[np.number]).fillna(0)\ny = clean_df[target]\n\nif X.shape[1] > 0:\n    is_classification = (y.nunique() <= 15) or (y.dtype == 'object')\n    if is_classification:\n        model = RandomForestClassifier(n_estimators=100, random_state=42)\n        task_name = \"分類模型 (Classification)\"\n    else:\n        model = RandomForestRegressor(n_estimators=100, random_state=42)\n        task_name = \"迴歸模型 (Regression)\"\n\n    model.fit(X, y)\n    score = model.score(X, y)\n    print(f\"🎯 模型類型: {task_name}\")\n    print(f\"🎯 模型擬合分數 (Accuracy / R2): {score*100:.2f}%\")\n\n    imp_df = pd.DataFrame({\n        '特徵名稱': X.columns,\n        '重要性佔比(%)': (model.feature_importances_ * 100).round(2)\n    }).sort_values('重要性佔比(%)', ascending=True)\n\n    plt.figure(figsize=(8, max(4, len(X.columns)*0.35)), dpi=130)\n    colors = ['#e11d48' if v >= 10 else '#64748b' for v in imp_df['重要性佔比(%)']]\n    plt.barh(imp_df['特徵名稱'], imp_df['重要性佔比(%)'], color=colors, edgecolor='black')\n    plt.xlabel('隨機森林特徵重要性 (%)')\n    plt.title(f'影響 {target} 的關鍵特徵排行 ({table_name})', fontweight='bold')\n    plt.grid(axis='x', linestyle='--', alpha=0.5)\n    plt.tight_layout()\nelse:\n    imp_df = pd.DataFrame({'提示': ['無足夠數值特徵可供建模']})\n\nimp_df.sort_values('重要性佔比(%)', ascending=False) if '重要性佔比(%)' in imp_df.columns else imp_df",
+      "note": "💡 【通用機器學習特徵掃描】\n這段程式碼會自動判斷 `seller_state` 是分類問題還是連續數值問題，並用隨機森林排出哪些欄位對 `seller_state` 最具決定性影響力！",
+      "chart_config": {}
+    }
+  ],
+  "product_category_name_translation": [
+    {
+      "id": "product_category_name_translation_sql_step1",
+      "lang": "sql",
+      "title": "【Step 1 看主角】檢查 product_category_name_english 的分佈與比例",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "sql": "-- [自動為 product_category_name_translation 生成] 檢查主角欄位 product_category_name_english 的各類別筆數與佔比\nSELECT \n    \"product_category_name_english\",\n    COUNT(*) AS 筆數,\n    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM \"product_category_name_translation\"), 2) AS 佔比百分比\nFROM \"product_category_name_translation\"\nGROUP BY \"product_category_name_english\"\nORDER BY 筆數 DESC\nLIMIT 30;",
+      "note": "💡 【專案 `product_category_name_translation` - Step 1】\n系統已自動將目標欄位設為 `product_category_name_english`。先觀察各類別筆數與佔比是否平衡！",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "product_category_name_english",
+        "y1_col": "筆數",
+        "y2_col": "佔比百分比"
+      }
+    },
+    {
+      "id": "product_category_name_translation_sql_step2",
+      "lang": "sql",
+      "title": "【Step 2 全表比較】依 product_category_name_english 分組比較關鍵指標平均值",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "sql": "-- [自動為 product_category_name_translation 生成] 比較不同 product_category_name_english 分組下的關鍵數值指標平均差異\nSELECT \n    \"product_category_name_english\",\n    COUNT(*) AS 樣本數,\n    COUNT(*) AS 樣本數\nFROM \"product_category_name_translation\"\nGROUP BY \"product_category_name_english\"\nORDER BY \"product_category_name_english\"\nLIMIT 20;",
+      "note": "💡 【專案 `product_category_name_translation` - Step 2】\n系統已自動挑選出與 `product_category_name_english` 最相關的前幾個數值欄位：，比較它們在不同分組下的平均值差異。",
+      "chart_config": {
+        "type": "grouped_bar",
+        "x_col": "product_category_name_english",
+        "y1_col": "樣本數",
+        "y2_col": ""
+      }
+    },
+    {
+      "id": "product_category_name_translation_sql_step3_f1",
+      "lang": "sql",
+      "title": "【Step 3 找分界線 A】頭號關鍵欄位 product_category_name 對 product_category_name_english 的影響",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "-- 觀察不同 product_category_name 下的筆數與 product_category_name_english 變化\nSELECT \n    \"product_category_name\",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG(\"product_category_name_english\"), 2) AS \"product_category_name_english_平均值\"\nFROM \"product_category_name_translation\"\nGROUP BY \"product_category_name\"\nORDER BY \"product_category_name\";",
+      "note": "💡 【專案 `product_category_name_translation` - Step 3-A】\n`product_category_name` 是目前與 `product_category_name_english` 相關度排名第 1 的特徵。請觀察左下方雙軸圖中紅色折線（product_category_name_english_平均值）隨 `product_category_name` 變化的轉折點！",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "product_category_name",
+        "y1_col": "product_category_name_english_平均值",
+        "y2_col": "總筆數"
+      }
+    },
+    {
+      "id": "product_category_name_translation_sql_step3_f2",
+      "lang": "sql",
+      "title": "【Step 3 找分界線 B】第二關鍵欄位 product_category_name 對 product_category_name_english 的影響",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "-- 觀察不同 product_category_name 下的筆數與 product_category_name_english 變化\nSELECT \n    \"product_category_name\",\n    COUNT(*) AS 總筆數,\n    ROUND(AVG(\"product_category_name_english\"), 2) AS \"product_category_name_english_平均值\"\nFROM \"product_category_name_translation\"\nGROUP BY \"product_category_name\"\nORDER BY \"product_category_name\";",
+      "note": "💡 【專案 `product_category_name_translation` - Step 3-B】\n觀察排名第 2 的特徵 `product_category_name` 在各區間下對 `product_category_name_english` 的影響趨勢。",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "product_category_name",
+        "y1_col": "product_category_name_english_平均值",
+        "y2_col": "總筆數"
+      }
+    },
+    {
+      "id": "product_category_name_translation_py_step1_check",
+      "lang": "python",
+      "title": "【Python 基礎 1】product_category_name_translation 數據體檢三連發 (空值 / 重複 / describe)",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "sql": "# [自動為 product_category_name_translation 生成] 系統已將 \"product_category_name_translation\" 載入為 df\nprint(\"=== 1. 資料表維度 (筆數, 欄位數) ===\")\nprint(df.shape)\n\nprint(\"\\n=== 2. 檢查每個欄位的空值數量 ===\")\nprint(df.isnull().sum())\n\nprint(\"\\n=== 3. 檢查完全重複的紀錄筆數 ===\")\nprint(\"重複筆數:\", df.duplicated().sum())\n\nprint(\"\\n=== 4. 目標欄位 product_category_name_english 分佈前 10 項 ===\")\nprint(df['product_category_name_english'].value_counts(dropna=False).head(10))\n\n# 最後一行自動轉成右下角互動式統計表\ndf.describe().T.round(2)",
+      "note": "💡 【Python 自動體檢】\n一鍵檢查 `product_category_name_translation` 的維度、缺失值、重複筆數與統計摘要！",
+      "chart_config": {}
+    },
+    {
+      "id": "product_category_name_translation_py_step2_heatmap",
+      "lang": "python",
+      "title": "【Python 視覺化 1】product_category_name_translation 數值欄位相關性熱力圖 (Heatmap)",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "sql": "# [自動為 product_category_name_translation 生成] 計算數值欄位相關係數並繪製熱力圖\nnum_df = df.select_dtypes(include=[np.number])\n\nif num_df.shape[1] >= 2:\n    # 若數值欄位超過 10 個，挑選與目標最相關的前 10 個繪圖以免擁擠\n    cols_to_plot = list(num_df.columns[:10])\n    if 'product_category_name_english' in num_df.columns:\n        corr_target = num_df.corr()['product_category_name_english'].abs().sort_values(ascending=False)\n        cols_to_plot = list(corr_target.index[:10])\n\n    plt.figure(figsize=(8.5, 6.5), dpi=130)\n    sns.heatmap(num_df[cols_to_plot].corr(), annot=True, fmt=\".2f\", cmap=\"coolwarm\", linewidths=1)\n    plt.title(\"product_category_name_translation - 重點數值特徵相關係數熱力圖\", fontsize=12, fontweight=\"bold\", pad=12)\n    plt.tight_layout()\n    print(\"✅ 已完成相關性熱力圖繪製！\")\nelse:\n    print(\"⚠️ 數值型欄位不足 2 個，無法繪製相關性熱力圖。\")\n\nnum_df.corr().round(3) if num_df.shape[1] >= 2 else df.head(20)",
+      "note": "💡 【Python 相關性矩陣】\n自動挑選出 `product_category_name_translation` 中與 `product_category_name_english` 最相關的數值特徵繪製熱力圖。",
+      "chart_config": {}
+    },
+    {
+      "id": "product_category_name_translation_py_step3_visual",
+      "lang": "python",
+      "title": "【Python 視覺化 2】關鍵特徵 () 分佈與對比圖",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "sql": "# [自動為 product_category_name_translation 生成] 針對前 4 大關鍵數值特徵繪製分組箱型圖或分佈圖\nkey_cols = [c for c in [] if c in df.columns]\ntarget = 'product_category_name_english'\n\nif len(key_cols) > 0:\n    n = len(key_cols)\n    rows = 2 if n > 2 else 1\n    cols = 2 if n > 1 else 1\n    fig, axes = plt.subplots(rows, cols, figsize=(11, 3.6 * rows), dpi=130)\n    axes_list = np.array(axes).reshape(-1) if n > 1 else [axes]\n\n    # 若目標變數類別數 <= 8，畫分組箱型圖；否則畫散佈趨勢圖\n    is_cat_target = df[target].nunique() <= 8\n\n    for ax, col in zip(axes_list, key_cols):\n        if is_cat_target:\n            sns.boxplot(data=df, x=target, y=col, ax=ax, palette=\"Set2\", width=0.45)\n            ax.set_title(f\"{col} (依 {target} 分組箱型圖)\", fontsize=11, fontweight=\"bold\")\n        else:\n            sns.scatterplot(data=df.sample(min(len(df), 500), random_state=42), x=col, y=target, ax=ax, alpha=0.6)\n            ax.set_title(f\"{col} vs {target} 散佈圖\", fontsize=11, fontweight=\"bold\")\n\n    plt.tight_layout()\n    print(\"✅ 已繪製關鍵特徵對比圖！\")\ndf[key_cols + ([target] if target not in key_cols else [])].describe().T.round(2)",
+      "note": "💡 【Python 自動視覺化】\n系統會自動判斷 `product_category_name_english` 是分類型（畫分組箱型圖 Boxplot）還是連續數值型（畫散佈圖 Scatterplot）！",
+      "chart_config": {}
+    },
+    {
+      "id": "product_category_name_translation_py_step4_ml",
+      "lang": "python",
+      "title": "【Python 機器學習】自動訓練隨機森林找出影響 product_category_name_english 的特徵重要性排行",
+      "step_tag": "Step 4: 規則驗證 (Validate)",
+      "sql": "# [自動為 product_category_name_translation 生成] 自動判別分類或迴歸任務，用隨機森林找出關鍵特徵\nfrom sklearn.ensemble import RandomForestClassifier, RandomForestRegressor\n\ntarget = 'product_category_name_english'\nclean_df = df.dropna(subset=[target]).copy()\n\n# 取出數值特徵並填補空值\nX = clean_df.drop(columns=[target]).select_dtypes(include=[np.number]).fillna(0)\ny = clean_df[target]\n\nif X.shape[1] > 0:\n    is_classification = (y.nunique() <= 15) or (y.dtype == 'object')\n    if is_classification:\n        model = RandomForestClassifier(n_estimators=100, random_state=42)\n        task_name = \"分類模型 (Classification)\"\n    else:\n        model = RandomForestRegressor(n_estimators=100, random_state=42)\n        task_name = \"迴歸模型 (Regression)\"\n\n    model.fit(X, y)\n    score = model.score(X, y)\n    print(f\"🎯 模型類型: {task_name}\")\n    print(f\"🎯 模型擬合分數 (Accuracy / R2): {score*100:.2f}%\")\n\n    imp_df = pd.DataFrame({\n        '特徵名稱': X.columns,\n        '重要性佔比(%)': (model.feature_importances_ * 100).round(2)\n    }).sort_values('重要性佔比(%)', ascending=True)\n\n    plt.figure(figsize=(8, max(4, len(X.columns)*0.35)), dpi=130)\n    colors = ['#e11d48' if v >= 10 else '#64748b' for v in imp_df['重要性佔比(%)']]\n    plt.barh(imp_df['特徵名稱'], imp_df['重要性佔比(%)'], color=colors, edgecolor='black')\n    plt.xlabel('隨機森林特徵重要性 (%)')\n    plt.title(f'影響 {target} 的關鍵特徵排行 ({table_name})', fontweight='bold')\n    plt.grid(axis='x', linestyle='--', alpha=0.5)\n    plt.tight_layout()\nelse:\n    imp_df = pd.DataFrame({'提示': ['無足夠數值特徵可供建模']})\n\nimp_df.sort_values('重要性佔比(%)', ascending=False) if '重要性佔比(%)' in imp_df.columns else imp_df",
+      "note": "💡 【通用機器學習特徵掃描】\n這段程式碼會自動判斷 `product_category_name_english` 是分類問題還是連續數值問題，並用隨機森林排出哪些欄位對 `product_category_name_english` 最具決定性影響力！",
+      "chart_config": {}
+    }
+  ]
+}

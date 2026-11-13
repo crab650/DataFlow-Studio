@@ -1,0 +1,18 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Rebuilt from the CSV files when the application starts.
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+source_fingerprints.json
+
+# Local backups and temporary files.
+*.json.bak
+*.json.tmp
+*.zip
+kaggle_dump.html

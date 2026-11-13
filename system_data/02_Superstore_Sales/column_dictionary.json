@@ -1,0 +1,88 @@
+{
+  "superstoreorders": {
+    "order_id": {
+      "zh": "訂單編號",
+      "purpose": "識別單筆或多品項合併訂單"
+    },
+    "order_date": {
+      "zh": "下單日期",
+      "purpose": "分析銷售時間序列與季節性趨勢 (YYYY-MM-DD)"
+    },
+    "ship_date": {
+      "zh": "出貨日期",
+      "purpose": "對照下單日計算出貨前置天數 (YYYY-MM-DD)"
+    },
+    "ship_mode": {
+      "zh": "運送方式",
+      "purpose": "比較標準/急件/當日達的運費與交期表現"
+    },
+    "customer_name": {
+      "zh": "客戶姓名",
+      "purpose": "識別個別客戶消費頻率與貢獻度 (RFM分析)"
+    },
+    "segment": {
+      "zh": "客群分類",
+      "purpose": "比較一般消費者(Consumer)、企業(Corporate)、小型辦公室(Home Office)"
+    },
+    "state": {
+      "zh": "州/省/行政區",
+      "purpose": "細分各國境內的省州級別銷售與損益"
+    },
+    "country": {
+      "zh": "國家",
+      "purpose": "跨國市場營收與毛利表現對比"
+    },
+    "market": {
+      "zh": "全球市場區域",
+      "purpose": "比較 APAC、EU、US、LATAM、Africa、EMEA 等大市場"
+    },
+    "region": {
+      "zh": "銷售子區域",
+      "purpose": "檢視各大市場底下的細分地理區域表現"
+    },
+    "product_id": {
+      "zh": "商品編號",
+      "purpose": "唯一識別商品 SKU"
+    },
+    "category": {
+      "zh": "商品大分類",
+      "purpose": "比較辦公用品(Office Supplies)、科技(Technology)、家具(Furniture)"
+    },
+    "sub_category": {
+      "zh": "商品子分類",
+      "purpose": "深入找出高毛利與常態虧損的特定品類"
+    },
+    "product_name": {
+      "zh": "商品名稱",
+      "purpose": "檢視單品級別暢銷榜與虧損黑洞商品"
+    },
+    "sales": {
+      "zh": "銷售額",
+      "purpose": "衡量訂單營收規模 (已轉為純數值)"
+    },
+    "quantity": {
+      "zh": "銷售數量",
+      "purpose": "分析單筆訂購件數與規模效應"
+    },
+    "discount": {
+      "zh": "折扣率",
+      "purpose": "關鍵特徵：分析高折扣是否侵蝕利潤導致虧損"
+    },
+    "profit": {
+      "zh": "利潤(損益)",
+      "purpose": "核心目標變數(Y)：衡量訂單實際獲利或虧損金額"
+    },
+    "shipping_cost": {
+      "zh": "運費成本",
+      "purpose": "評估物流費用對淨利的影響"
+    },
+    "order_priority": {
+      "zh": "訂單優先級",
+      "purpose": "比較 Critical / High / Medium / Low 訂單的運費與損益"
+    },
+    "year": {
+      "zh": "訂單年份",
+      "purpose": "按年度 (2011~2014) 追蹤業績成長率"
+    }
+  }
+}

@@ -1,0 +1,380 @@
+{
+  "superstoreorders": [
+    {
+      "id": "overview_py_data_info",
+      "lang": "python",
+      "title": "【數據概覽】5.1 萬筆資料維度、型態、空值與數值五數摘要 (describe)",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "folder": "01_數據體檢與欄位工程 (Data Overview & Cleaning)",
+      "sql": "# ==============================================================================\n# 🎓 【新手教學】Python 數據健康檢查三部曲\n# 目的：在動手分析前，先摸清資料長度、欄位型態、有沒有缺漏與異常值。\n# ==============================================================================\n\n# 1. 檢視資料集規模 (筆數, 欄位數)\nprint(\"=== 1. 資料集形狀 (Row 筆數, Column 欄位數) ===\")\nprint(f\"總訂單筆數: {df.shape[0]:,} 筆, 欄位數量: {df.shape[1]} 個\")\n\n# 2. 檢查是否有任何缺失值 (Missing Values)\nprint(\"\\n=== 2. 檢查各欄位缺漏值數量 ===\")\nnulls = df.isnull().sum()\nif nulls.sum() == 0:\n    print(\"✅ 太棒了！全表 21 個欄位 100% 完整，完全沒有缺失值。\")\nelse:\n    print(nulls[nulls > 0])\n\n# 3. 檢查是否有完全重複的髒資料\nprint(\"\\n=== 3. 檢查重複訂單明細 ===\")\ndup_count = df.duplicated().sum()\nprint(f\"重複紀錄: {dup_count} 筆\" if dup_count > 0 else \"✅ 無任何完全重複的訂單紀錄。\")\n\n# 4. 輸出數值欄位的描述性統計（五數摘要：個數、平均、標準差、最小、四分位數、最大值）\n# 提示：輸出會自動呈現在右下角互動數據表中，方便點擊排序查看\nprint(\"\\n=== 4. 關鍵數值指標統計摘要表 ===\")\ndf[['sales', 'quantity', 'discount', 'profit', 'shipping_cost']].describe().round(2)",
+      "note": "🎓 【新手數據體檢第一步：為什麼要做這個分析？】\n\n1. 為什麼不能直接畫圖？\n很多初學者拿到資料，第一步就急著拉迴歸或畫華麗圖表，結果被裡面的「隱形空值」或「異常負數」徹底誤導。數據分析的第一準則永遠是「垃圾進，垃圾出 (Garbage In, Garbage Out)」。在分析前，我們必須先幫資料做一次全面的「身體健康檢查」！\n\n2. 怎麼看這份體檢報告？（白話拆解）\n- 資料規模 (shape)：全表共有 51,290 筆訂單明細，橫跨 21 個欄位，屬於中型交易流水帳。\n- 缺失值 (isnull)：檢查結果為 0，這代表資料非常乾淨完整，不需要做填補 (imputation)。\n- 數值分佈 (describe)：\n  • sales（銷售額）：最小 0.44 美元，最大高達 22,638 美元，中位數約 85 美元。\n  • discount（折扣率）：0% 到 85%，平均給了 14.3% 的折扣。\n  • profit（利潤）：最低倒賠 -$6,600 美元，最高淨賺 +$8,400 美元！這是一個極度重要的發現，說明公司存在「慘賠的訂單」，這正是後續追查的破案線索！\n\n3. 給初學者的避坑指引：\n看 describe() 時，不要只看 mean（平均值），一定要對比 50%（中位數）。若平均值跟中位數差距巨大，代表數據內有極端大單或嚴重的離群值。",
+      "chart_config": {}
+    },
+    {
+      "id": "overview_sql_kpi_summary",
+      "lang": "sql",
+      "title": "【Step 1 看目標】總營收、總利潤、總訂單數與平均毛利率大盤速覽",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "folder": "01_數據體檢與欄位工程 (Data Overview & Cleaning)",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL 聚合函數速算商業大盤指標 (KPI Summary)\n-- 學習重點：\n-- 1. SUM() 算總額、COUNT() 算筆數、COUNT(DISTINCT) 算不重複客戶與訂單數。\n-- 2. ROUND(..., 2) 四捨五入到小數點後兩位。\n-- 3. 乘上 100.0 是為了轉成浮點數避免整數除法失真，並轉為百分比。\n-- ==============================================================================\nSELECT \n    ROUND(SUM(sales), 2) AS total_sales_usd,            -- 總營業額 (美元)\n    ROUND(SUM(profit), 2) AS total_profit_usd,          -- 總淨利潤 (美元)\n    ROUND(SUM(profit) * 100.0 / SUM(sales), 2) AS overall_profit_margin_pct, -- 全店整體毛利率 (%)\n    COUNT(*) AS total_order_items,                      -- 總訂單明細件數\n    COUNT(DISTINCT order_id) AS unique_orders,          -- 獨立訂單張數\n    COUNT(DISTINCT customer_name) AS unique_customers,  -- 總服務顧客人數\n    ROUND(AVG(shipping_cost), 2) AS avg_shipping_cost   -- 平均每筆物流運費\nFROM superstoreorders;",
+      "note": "🎓 【新手大盤速覽：為什麼要先算這幾個總數？】\n\n1. 商業目的（北極星指標 North Star Metric）：\n不管你向老闆、投資人或客戶報告，第一張投影片永遠是「大盤核心數字」。你必須在 3 秒內回答三個基本問題：\n① 這家公司一年做多少生意？（總營收）\n② 到底有沒有賺錢？（總利潤）\n③ 賺錢的含金量高不高？（整體毛利率）\n\n2. 白話解讀大盤結果：\n- 總營收：1,264 萬美元 ($12.64M)\n- 總利潤：146.7 萬美元 ($1.47M)\n- 總訂單筆數：51,290 筆明細，涵蓋 25,035 張獨立訂單\n- 整體毛利率：11.61%\n👉 初學者洞察：這家超商整體是有獲利的，但 11.6% 的毛利率屬於「薄利零售業」。這意味著：只要公司在物流上浪費一點、或業務亂給 15%~20% 的折扣，整張訂單就會立刻從賺錢變成賠錢！\n\n3. SQL 語法新手避坑重點：\n計算毛利率時，絕對不能寫 `AVG(profit / sales)`！因為每筆訂單金額有大有小，直接對比率取平均會犯下嚴重的「加權平均陷阱 (Simpson's Paradox)」。正確寫法一定是 `SUM(profit) * 100.0 / SUM(sales)`，先算出總賺多少錢，再除以總賣多少錢！",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "涵蓋國家數",
+        "y1_col": "總營業額_USD",
+        "y2_col": "總淨利潤_USD"
+      }
+    },
+    {
+      "id": "trend_sql_48m_series",
+      "lang": "sql",
+      "title": "【48 個月連續趨勢】每月銷額、利潤與訂單量走勢 (雙軸圖)",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "folder": "02_月度趨勢與季節性 (Monthly Sales & Profit Trend)",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL 時間截斷與分組 (Time Grouping)\n-- 學習重點：\n-- 1. SUBSTR(order_date, 1, 7) 或 STRFTIME('%Y-%m', ...) 截取年份與月份 (YYYY-MM)。\n-- 2. GROUP BY year_month：將 5 萬多筆交易依月份歸納聚合。\n-- 3. 雙軸圖設定：長條看營收 (Sales)，折線看利潤 (Profit)，對比是否有增收不增利現象。\n-- ==============================================================================\nSELECT \n    SUBSTR(order_date, 1, 7) AS year_month,            -- 年月份 (YYYY-MM)\n    ROUND(SUM(sales), 2) AS monthly_sales,              -- 當月銷售總額 (左軸長條)\n    ROUND(SUM(profit), 2) AS monthly_profit,            -- 當月淨利潤 (右軸折線)\n    ROUND(SUM(profit) * 100.0 / SUM(sales), 2) AS monthly_margin_pct, -- 當月毛利率 (%)\n    COUNT(DISTINCT order_id) AS monthly_orders          -- 當月訂單量\nFROM superstoreorders\nGROUP BY year_month\nORDER BY year_month ASC;",
+      "note": "🎓 【新手趨勢分析：為什麼要做 48 個月連續走勢？】\n\n1. 商業目的：\n大盤賺錢不代表「每個月都在賺錢」！時間序列（Time Series）分析的目的，是為了找出公司發展的「健康曲線」：\n① 業績是逐年增長還是衰退？\n② 有沒有哪幾個月突然發生異常暴跌或獲利斷層？\n\n2. 為什麼要用「雙軸圖」看？（初學者必學觀念）\n左軸看「銷售額長條圖」、右軸看「利潤額折線圖」。\n初學者請特別觀察：「折線有沒有跟著長條往上走？」\n如果某個月長條衝得非常高（營業額大爆發），但折線卻平平甚至向下掉，就代表那次促銷活動是「打腫臉充胖子，割肉賠本賺吆喝」！\n\n3. 觀察重點與結論：\n從 2011 到 2014 年，這家超商的波峰一年比一年高，具備強大的擴張動能。而且每一年都呈現極為規律的「年初低谷、年底 Q4 衝上雲霄」的週期性。",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "年月",
+        "y1_col": "月度利潤",
+        "y2_col": "月度銷售額"
+      }
+    },
+    {
+      "id": "trend_py_monthly_dual_axis",
+      "lang": "python",
+      "title": "【Python 視覺化】每月 Sales & Profit 雙折線圖 + 利潤率副軸曲線",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "folder": "02_月度趨勢與季節性 (Monthly Sales & Profit Trend)",
+      "sql": "# ==============================================================================\n# 🎓 【新手教學】Python 雙 Y 軸 (Twinx) 專業商業走勢圖繪製\n# 學習重點：\n# 1. pd.to_datetime()：將字串日期轉為 Datetime 物件，以利按月排序。\n# 2. dt.to_period('M')：快速轉換為月份週期 (YYYY-MM)。\n# 3. ax1.twinx()：解決「金額」與「百分比」兩者量級不同無法並存在同一張圖的難題。\n# ==============================================================================\ndf_monthly = df.copy()\ndf_monthly['order_dt'] = pd.to_datetime(df_monthly['order_date'])\ndf_monthly['year_month'] = df_monthly['order_dt'].dt.to_period('M').astype(str)\n\nmonthly_agg = df_monthly.groupby('year_month').agg(\n    total_sales=('sales', 'sum'),\n    total_profit=('profit', 'sum')\n).reset_index()\n\nmonthly_agg['profit_margin'] = (monthly_agg['total_profit'] / monthly_agg['total_sales']) * 100\n\n# 建立畫布與雙軸\nfig, ax1 = plt.subplots(figsize=(12, 5), dpi=130)\n\n# 第一軸：銷售額與利潤折線\nax1.plot(monthly_agg['year_month'], monthly_agg['total_sales'], label='月度銷售額 (Sales USD)', color='#0284c7', marker='o', linewidth=2)\nax1.plot(monthly_agg['year_month'], monthly_agg['total_profit'], label='月度利潤 (Profit USD)', color='#10b981', marker='s', linewidth=2)\nax1.set_xlabel('月份 (2011-01 ~ 2014-12)', fontsize=10, fontweight='bold')\nax1.set_ylabel('金額 (USD)', fontsize=10, fontweight='bold')\nax1.tick_params(axis='x', rotation=75, labelsize=8)\nax1.grid(True, linestyle='--', alpha=0.3)\n\n# 第二軸：利潤率百分比\nax2 = ax1.twinx()\nax2.plot(monthly_agg['year_month'], monthly_agg['profit_margin'], label='利潤率 (Margin %)', color='#f59e0b', linestyle=':', linewidth=2)\nax2.set_ylabel('毛利率 (%)', fontsize=10, fontweight='bold', color='#f59e0b')\nax2.set_ylim(-5, 25)\n\n# 合併兩軸圖例\nlines_1, labels_1 = ax1.get_legend_handles_labels()\nlines_2, labels_2 = ax2.get_legend_handles_labels()\nax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc='upper left', frameon=True)\n\nplt.title('Superstore: 48 個月連續營運體檢（營收飆升 vs 毛利率穩健度）', fontsize=12, fontweight='bold', pad=12)\nplt.tight_layout()\nprint(\"✅ 圖表繪製完成！請觀察銷售額與利潤率是否同步健康成長。\")",
+      "note": "🎓 【新手視覺化教學：為什麼金額與百分比要分開看？】\n\n1. 商業目的：\n絕對金額（美元）容易受規模膨脹影響，讓人產生「業績越來越好」的錯覺。但身為專業分析師，我們必須同時檢驗「利潤率 (Profit Margin %)」——這代表公司的賺錢效率有沒有隨著規模變大而改善？\n\n2. Python 語法學習重點：\n使用 Matplotlib 的 `ax1.twinx()` 建立雙 Y 軸：\n- 左軸 (ax1)：展示幾十萬美元的 Sales 與 Profit 絕對金額走勢。\n- 右軸 (ax2)：展示 0%~20% 的利潤率百分比曲線。\n\n3. 專業洞察：\n初學者可以清晰看到：雖然銷售總額由 2011 年初的 10 萬一路飆漲到 2014 年底的 50 萬美元，但利潤率曲線始終在 10%~14% 之間平行震盪，說明這家公司的規模經濟（Scale Effect）並未轉化成更高毛利率，營運效率仍有精進空間。",
+      "chart_config": {}
+    },
+    {
+      "id": "trend_sql_seasonality",
+      "lang": "sql",
+      "title": "【季節性規律】跨年 1~12 月歷史累計業績：年底 Q4 旺季爆發特徵",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "folder": "02_月度趨勢與季節性 (Monthly Sales & Profit Trend)",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL 季節性月份提取 (Seasonality Extraction)\n-- 學習重點：\n-- 1. STRFTIME('%m', order_date) 提取 01~12 月份，跨越年份統計累積月份規律。\n-- 2. CASE 語句標記「淡季 / 平季 / 爆發旺季」，將冰冷數字直接轉為業務洞察。\n-- ==============================================================================\nSELECT \n    STRFTIME('%m', order_date) AS order_month,         -- 月份 (01 ~ 12)\n    ROUND(SUM(sales), 2) AS total_sales,                -- 4 年累積銷售總額\n    ROUND(SUM(profit), 2) AS total_profit,              -- 4 年累積淨利潤\n    ROUND(SUM(profit) * 100.0 / SUM(sales), 2) AS profit_margin_pct, -- 累積毛利率\n    COUNT(DISTINCT order_id) AS total_orders,           -- 累積訂單量\n    CASE \n        WHEN STRFTIME('%m', order_date) IN ('11', '12') THEN '🔥 爆發旺季 (Q4 年終促銷大爆發)'\n        WHEN STRFTIME('%m', order_date) IN ('09', '10') THEN '🚀 爬升期 (下半年開學與採購熱潮)'\n        WHEN STRFTIME('%m', order_date) IN ('01', '02') THEN '💤 傳統淡季 (新年過後買氣修整期)'\n        ELSE '🌤️ 平穩營運期'\n    END AS business_season_tag\nFROM superstoreorders\nGROUP BY order_month\nORDER BY order_month ASC;",
+      "note": "🎓 【新手季節性分析：為什麼零售業一定要抓出「月份週期」？】\n\n1. 商業目的（庫存備貨與行銷節奏）：\n在零售與電商領域，最怕的就是「淡季囤太多貨壓垮現金流，旺季卻缺貨眼睜睜看著錢被對手賺走」。\n透過跨年份加總每個月（1~12 月）的歷史累積表現，我們可以徹底摸清客戶的「年度採購心跳」。\n\n2. 白話看懂數據規律：\n- 💤 **極度淡季（1~2 月）**：春節或新年過後，顧客荷包空空，銷售額是全年的谷底（單月僅 50~60 萬美元）。\n- 🌤️ **平穩築底（3~7 月）**：進入上半年穩定採購期，單月約 70~80 萬美元。\n- 🚀 **Q4 瘋狂爆發（9~12 月）**：從 9 月開學季一路衝到 11 月雙十一/黑五及 12 月聖誕跨年，11 與 12 月單月均突破 150 萬美元！\n\n3. 給業務與供應鏈的具體決策建議：\n- 採購主管：最遲必須在每年 7~8 月就向工廠下單備齊 Q4 旺季的熱銷 SKU！\n- 行銷主管：不要在上半年淡季亂灑廣告，請把 60% 以上的促銷預算集中在 10~12 月強勢進攻！",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "月份",
+        "y1_col": "四年累計利潤",
+        "y2_col": "四年累計銷售額"
+      }
+    },
+    {
+      "id": "trend_py_yoy_comparison",
+      "lang": "python",
+      "title": "【跨年度對比】2011~2014 各年份月度走勢重疊圖 (YoY)",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "folder": "02_月度趨勢與季節性 (Monthly Sales & Profit Trend)",
+      "sql": "# ==============================================================================\n# 🎓 【新手教學】Python 年對年 (YoY) 疊加走勢圖與透視表\n# 學習重點：\n# 1. dt.month：提取 1~12 整數月份作為共用橫軸。\n# 2. sns.lineplot(hue='year')：自動依年份分成 4 條不同顏色的折線對比。\n# 3. pivot()：將長資料轉為「列=月份, 欄=年份」的交叉透視表，便於跨年比對。\n# ==============================================================================\ndf_yoy = df.copy()\ndf_yoy['order_dt'] = pd.to_datetime(df_yoy['order_date'])\ndf_yoy['month'] = df_yoy['order_dt'].dt.month\n\nyoy_summary = df_yoy.groupby(['year', 'month']).agg(\n    sales=('sales', 'sum'),\n    profit=('profit', 'sum')\n).reset_index()\n\nplt.figure(figsize=(10, 5), dpi=130)\npalette = ['#94a3b8', '#38bdf8', '#818cf8', '#e11d48']\n\nsns.lineplot(\n    data=yoy_summary,\n    x='month',\n    y='sales',\n    hue='year',\n    palette=palette,\n    marker='o',\n    linewidth=2.2\n)\n\nplt.title('Superstore: 2011~2014 跨年度各月銷售額走勢重疊對比 (YoY)', fontsize=12, fontweight='bold', pad=12)\nplt.xlabel('月份 (1 ~ 12月)', fontsize=10)\nplt.ylabel('月度總營業額 (Sales USD)', fontsize=10)\nplt.xticks(range(1, 13), [f'{m}月' for m in range(1, 13)])\nplt.grid(True, linestyle='--', alpha=0.4)\nplt.legend(title='年份 (Year)', frameon=True)\nplt.tight_layout()\n\nprint(\"✅ 已完成跨年度同月對比圖！每年皆呈現完美階梯式向上躍升。\")\nyoy_summary.pivot(index='month', columns='year', values='sales').round(0)",
+      "note": "🎓 【新手 YoY 分析：什麼是「年增率 (Year-over-Year)」？】\n\n1. 為什麼要把 4 年的線疊在一起看？\n如果把 48 個月排成一長條，有時候很難看出「今年 5 月到底有沒有比去年 5 月好」。\nYoY 對比就是把橫軸固定為 1~12 月，把 2011, 2012, 2013, 2014 四個年份畫成 4 條不同顏色的線。\n\n2. 白話看懂圖形形態：\n這張圖是所有商業分析師最夢寐以求的形態——**「完美階梯式向上躍升」**！\n- 灰線 (2011) 在最底下。\n- 淺藍線 (2012) 完全覆蓋在 2011 之上。\n- 紫線 (2013) 繼續向上推升。\n- 紅線 (2014) 在最頂端全面領跑！\n這證明這家超商每年都在紮實地擴大客戶規模與銷售版圖，成長動力非常強勁且健康。\n\n3. 輸出透視表 (Pivot Table) 提示：\n下方自動產出的透視表，清楚展示各年份各月份的銷售數字對照，初學者可以直接一眼查閱具體金額。",
+      "chart_config": {}
+    },
+    {
+      "id": "cat_sql_three_categories",
+      "lang": "sql",
+      "title": "【品類矩陣】三大主分類 (Technology, Office Supplies, Furniture) 表現對比",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "folder": "03_品類與子品類深入分析 (Category & Sub-Category)",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL 主品類營運表現矩陣\n-- 學習重點：\n-- 1. SUM(profit) * 100.0 / SUM(sales) 計算各大品類實際毛利率。\n-- 2. SUM(quantity) 計算總銷售商品件數。\n-- 3. 雙軸圖設定：長條看營收規模，折線看利潤率高低，揪出虛胖品類。\n-- ==============================================================================\nSELECT \n    category,                                           -- 3 大品類名稱\n    ROUND(SUM(sales), 2) AS total_sales,                -- 品類總營收\n    ROUND(SUM(profit), 2) AS total_profit,              -- 品類淨利潤\n    ROUND(SUM(profit) * 100.0 / SUM(sales), 2) AS profit_margin_pct, -- 毛利率 (%)\n    SUM(quantity) AS total_quantity,                    -- 總售出商品件數\n    ROUND(AVG(discount) * 100, 2) AS avg_discount_pct,  -- 平均折扣率 (%)\n    ROUND(AVG(shipping_cost), 2) AS avg_shipping_cost   -- 平均每筆物流運費\nFROM superstoreorders\nGROUP BY category\nORDER BY total_profit DESC;",
+      "note": "🎓 【新手品類分析：為什麼要按 Category 切片？】\n\n1. 商業目的：\n公司賣了幾千種產品，不可能每種產品的毛利率都一樣。做品類分析的目的是為了找出：「誰是賺錢主力金牛？誰是做白工的雷隊友？」\n\n2. 白話看懂三大品類表現：\n- 🥇 **Technology（科技類）**：\n  營收 474 萬美元，淨利潤高達 66.3 萬美元，毛利率高達 **14.0%**！是全店當之無愧的獲利第一支柱。\n- 🥈 **Office Supplies（辦公用品）**：\n  銷量筆數最大（超過 3.1 萬件），毛利率高達 **13.7%**，利潤 51.8 萬美元。雖然單價低，但回購率極高，是穩健的現金流護城河。\n- 🥉 **Furniture（家具類）**：\n  營收高達 411 萬美元，但利潤居然只有 **28.5 萬美元**，毛利率只有慘澹的 **6.9%**！\n  👉 初學者警訊：家具類體積大、重量重、物流成本高，且業務為了銷量往往給了大量折扣，導致「營收看似很大，其實根本沒賺多少錢」！",
+      "chart_config": {
+        "type": "grouped_bar",
+        "x_col": "商品大分類",
+        "y1_col": "總銷售額",
+        "y2_col": "總利潤"
+      }
+    },
+    {
+      "id": "cat_py_subcategory_sales_profit",
+      "lang": "python",
+      "title": "【子品類排行榜】17 個子品類 Sales vs Profit 雙向水平長條圖",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "folder": "03_品類與子品類深入分析 (Category & Sub-Category)",
+      "sql": "# ==============================================================================\n# 🎓 【新手教學】Python 雙向水平長條圖 (Horizontal Bar Chart)\n# 學習重點：\n# 1. 水平長條圖非常適合用來展示「名稱很多 (17個子品類)」的排行榜，閱讀體驗遠優於直立長條圖。\n# 2. 將 Sales 與 Profit 並列左右兩張子圖 (Subplots)，一眼看出「高營收卻低利潤」的反差。\n# ==============================================================================\nsubcat_perf = df.groupby('sub_category').agg(\n    total_sales=('sales', 'sum'),\n    total_profit=('profit', 'sum')\n).sort_values(by='total_sales', ascending=True).reset_index()\n\nfig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 6), sharey=True, dpi=130)\n\n# 左圖：銷售額\nax1.barh(subcat_perf['sub_category'], subcat_perf['total_sales'], color='#38bdf8')\nax1.set_title('17 大子品類：總銷售額排行榜 (USD)', fontsize=11, fontweight='bold')\nax1.set_xlabel('銷售金額 ($)', fontsize=10)\nax1.grid(True, linestyle='--', alpha=0.3)\n\n# 右圖：淨利潤 (特別用紅綠色標記賺錢與賠錢)\ncolors = ['#ef4444' if p < 0 else '#10b981' for p in subcat_perf['total_profit']]\nax2.barh(subcat_perf['sub_category'], subcat_perf['total_profit'], color=colors)\nax2.axvline(0, color='black', linewidth=1)\nax2.set_title('17 大子品類：淨利潤排行榜 (注意 Tables 嚴重失血！)', fontsize=11, fontweight='bold')\nax2.set_xlabel('利潤金額 ($)', fontsize=10)\nax2.grid(True, linestyle='--', alpha=0.3)\n\nplt.tight_layout()\nprint(\"✅ 圖表產出完成！Tables（桌子）是全店唯一的巨額負利潤子品類。\")",
+      "note": "🎓 【新手子品類分析：為什麼必須把品類切得更細？】\n\n1. 商業目的：\n上一張表我們發現 Furniture（家具）毛利率只有 6.9%，但家具裡面有椅子、桌子、書架，到底誰才是真正的兇手？不切到子品類（Sub-Category），你就只能瞎猜！\n\n2. 白話看懂這張 Kaggle 招牌圖：\n這張圖是 Kaggle 原作者最著名的一張視覺化：\n- 左邊長條看「銷售額大小」，右邊長條看「利潤賺賠」。\n- 抓出全店最大的虧損黑洞：**Tables（桌子）**！\n  Tables 的銷售額高達 75 萬美元，但利潤長條居然整條往左邊衝（**倒賠 -$64,083 美元**）！\n- 對照組：**Copiers（影印機）** 銷售額雖然不是最大，但淨利潤高達 **25.8 萬美元**，賺錢能力全店第一！\n\n3. 分析結論：\n這就是經典的「大而不當 vs 悶聲發大財」。做數據分析絕不能只看 Sales 排行榜，不然只會越賣越窮！",
+      "chart_config": {}
+    },
+    {
+      "id": "cat_sql_high_margin_subcats",
+      "lang": "sql",
+      "title": "【高毛利金牛 vs 低毛利薄利品類】17 個子品類利潤率矩陣",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "folder": "03_品類與子品類深入分析 (Category & Sub-Category)",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL 毛利率排行榜與業務分類標籤 (Profit Margin Rank)\n-- 學習重點：\n-- 1. ORDER BY profit_margin_pct DESC 依毛利率高低由大到小排序。\n-- 2. CASE 條件判斷自動將 17 個品類打上「商業決策標籤」。\n-- ==============================================================================\nSELECT \n    sub_category,\n    category,\n    ROUND(SUM(sales), 2) AS total_sales,\n    ROUND(SUM(profit), 2) AS total_profit,\n    ROUND(SUM(profit) * 100.0 / SUM(sales), 2) AS profit_margin_pct,\n    ROUND(AVG(discount) * 100, 2) AS avg_discount_pct,\n    CASE \n        WHEN SUM(profit) < 0 THEN '🩸 虧損地雷 (賣越多虧越多，需止血！)'\n        WHEN SUM(profit) * 100.0 / SUM(sales) >= 15.0 THEN '🌟 高毛利金牛 (獲利核心主力)'\n        WHEN SUM(profit) * 100.0 / SUM(sales) >= 10.0 THEN '🌤️ 穩健獲利品類'\n        ELSE '⚠️ 薄利多銷品類'\n    END AS category_health_status\nFROM superstoreorders\nGROUP BY sub_category, category\nORDER BY profit_margin_pct DESC;",
+      "note": "🎓 【新手毛利率矩陣：BCG 波士頓矩陣思維】\n\n1. 商業目的：\n初學者要學會把商品分成四象限：\n① **明星金牛**：營收大、毛利高（如 Phones 手機、Copiers 影印機）。\n② **流量商品**：營收大、毛利平平，用來吸引客戶（如 Binders 活頁夾）。\n③ **做白工薄利**：營收小、毛利極低（如 Storage 收納）。\n④ **虧損黑洞**：營收大卻嚴重賠錢（如 Tables 桌子、Bookcases 書架）。\n\n2. 白話看懂數據排行榜：\n- 🌟 **利潤率之王**：`Labels`（標籤紙，毛利 20.3%）、`Copiers`（影印機，毛利 17.1%）、`Paper`（紙張，毛利 14.3%）。\n- 🩸 **虧損地雷**：`Tables`（桌子，毛利 **-8.45%**）、`Bookcases`（書架，毛利 **-2.34%**）。\n\n3. 業務落地決策建議：\n採購主管應立刻對桌子（Tables）進行「價格重整」：提高基本售價、嚴格限制打折幅度（不超過 10%），並要求消費者分攤超重家具的額外運費！",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "商品子分類",
+        "y1_col": "利潤率百分比"
+      }
+    },
+    {
+      "id": "seg_sql_three_segments",
+      "lang": "sql",
+      "title": "【三大客群】Consumer, Corporate, Home Office 的營收與客單價對比",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "folder": "04_客群分類與購買行為 (Customer Segmentation)",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL 客群貢獻度與客單價分析\n-- 學習重點：\n-- 1. SUM(sales) / COUNT(DISTINCT order_id) 計算每張訂單的「平均客單價 (AOV)」。\n-- 2. 檢視各大客群的折扣依賴度與毛利率差異。\n-- ==============================================================================\nSELECT \n    segment,                                            -- 客群名稱\n    ROUND(SUM(sales), 2) AS total_sales,                -- 客群總營收\n    ROUND(SUM(profit), 2) AS total_profit,              -- 客群總利潤\n    ROUND(SUM(profit) * 100.0 / SUM(sales), 2) AS profit_margin_pct, -- 客群毛利率 (%)\n    COUNT(DISTINCT order_id) AS total_orders,           -- 總訂單張數\n    ROUND(SUM(sales) / COUNT(DISTINCT order_id), 2) AS avg_order_value, -- 平均客單價 (AOV USD)\n    ROUND(AVG(discount) * 100, 2) AS avg_discount_pct   -- 平均折扣率 (%)\nFROM superstoreorders\nGROUP BY segment\nORDER BY total_sales DESC;",
+      "note": "🎓 【新手客群分析：為什麼要做顧客分群 (Segmentation)？】\n\n1. 商業目的：\n做生意最忌諱「把所有客人都當成同一種人」。\n- 大眾消費者（Consumer）：對價格敏感，喜歡折扣與促銷。\n- 企業客戶（Corporate）：採購金額大，注重送貨速度與發票報帳流程。\n- 在家工作者（Home Office）：單筆採購通常包含高規格辦公設備。\n\n2. 白話看懂客群結構：\n- `Consumer`（一般消費者）：佔全店營收 **51.5%**（651 萬美元），是營收規模最大的主力大軍。\n- `Corporate`（企業行號）：佔營收 **30.2%**（382 萬美元），客單價穩定。\n- `Home Office`（小型/居家辦公）：佔營收 **18.3%**（231 萬美元），筆數雖少但含金量高！\n\n3. 給初學者的重要發現：\n這三個客群的毛利率都在 **11.5%~11.7%** 之間！這說明獲利低落不是特定客群的問題，而是全店各客群普遍存在「折扣給太兇」的共同毛病。",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "客群分類",
+        "y1_col": "總營業額",
+        "y2_col": "總淨利潤"
+      }
+    },
+    {
+      "id": "seg_py_segment_boxplots",
+      "lang": "python",
+      "title": "【客群特徵】不同客群在折扣率、購買件數與利潤的箱型圖 (Boxplot)",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "folder": "04_客群分類與購買行為 (Customer Segmentation)",
+      "sql": "# ==============================================================================\n# 🎓 【新手教學】Python Seaborn 箱型圖 (Boxplot) 離群值檢驗\n# 學習重點：\n# 1. plt.subplots(1, 3)：同時水平並列 3 張子圖對比不同指標。\n# 2. sns.boxplot()：自動計算中位數、四分位距 (IQR) 並標記極端離群值。\n# ==============================================================================\nfig, axes = plt.subplots(1, 3, figsize=(14, 5), dpi=130)\n\n# 子圖 1：折扣率分佈\nsns.boxplot(data=df, x='segment', y='discount', ax=axes[0], palette='Blues')\naxes[0].set_title('客群折扣率分佈 (Discount)', fontsize=11, fontweight='bold')\naxes[0].set_ylabel('折扣率 (0.0 = 0%, 0.5 = 50%)')\naxes[0].grid(True, linestyle='--', alpha=0.3)\n\n# 子圖 2：購買數量分佈\nsns.boxplot(data=df, x='segment', y='quantity', ax=axes[1], palette='Greens')\naxes[1].set_title('客群單筆購買件數 (Quantity)', fontsize=11, fontweight='bold')\naxes[1].set_ylabel('件數')\naxes[1].grid(True, linestyle='--', alpha=0.3)\n\n# 子圖 3：每筆訂單利潤分佈 (特別縮小 Y 軸範圍觀察核心區間)\nsns.boxplot(data=df, x='segment', y='profit', ax=axes[2], palette='Reds')\naxes[2].set_title('客群單筆利潤分佈 (注意負值離群點！)', fontsize=11, fontweight='bold')\naxes[2].set_ylim(-300, 300)\naxes[2].axhline(0, color='black', linestyle='--', alpha=0.6)\naxes[2].set_ylabel('利潤 (USD)')\naxes[2].grid(True, linestyle='--', alpha=0.3)\n\nplt.tight_layout()\nprint(\"✅ 箱型圖繪製完成！三客群利潤中位數皆接近，但皆有大量負值離群訂單。\")",
+      "note": "🎓 【新手視覺化教學：為什麼要看「箱型圖 (Boxplot)」？】\n\n1. 為什麼不能只看平均值？\n兩個班級的數學平均都是 60 分，但 A 班可能每個人都考 55~65 分；B 班卻是一半考 100 分、一半考 20 分！平均值會把嚴重的離群問題完全掩蓋。箱型圖能看清「數據的真實分佈與離群值（Outliers）」。\n\n2. 箱型圖怎麼看？（白話 3 秒速成）：\n- 中間的實心方塊：涵蓋了 **50% 的核心客戶**（25% 到 75% 區間）。\n- 方塊中間的橫線：**中位數**（真正的普羅大眾水平）。\n- 上下的黑色虛線（鬍鬚）：正常波動範圍。\n- 超出虛線的小黑點：**異常離群值**！\n\n3. 圖形解讀：\n看右側的「利潤箱型圖」，三種客群的方塊都緊貼在 0 附近，但下方都有密密麻麻掉進負幾百、甚至負幾千美元的黑點！這代表不管哪種客群，只要給了不合理的誇張折扣，通通會引發慘賠訂單！",
+      "chart_config": {}
+    },
+    {
+      "id": "geo_sql_market_ranking",
+      "lang": "sql",
+      "title": "【全球市場】APAC, EU, US, LATAM, Africa, EMEA 各大市場表現矩陣",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "folder": "05_地理區域與跨國市場 (Geographical Performance)",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL 全球主要地理大區 (Market) 表現排行\n-- 學習重點：\n-- 1. GROUP BY market 彙整各大洲經營數據。\n-- 2. 檢視各市場在「營收、利潤、毛利率、折扣率」上的均衡程度。\n-- ==============================================================================\nSELECT \n    market,                                             -- 7 大全球區域\n    ROUND(SUM(sales), 2) AS total_sales,                -- 區域總營收\n    ROUND(SUM(profit), 2) AS total_profit,              -- 區域淨利潤\n    ROUND(SUM(profit) * 100.0 / SUM(sales), 2) AS profit_margin_pct, -- 區域毛利率 (%)\n    COUNT(DISTINCT country) AS countries_count,         -- 涵蓋國家數量\n    COUNT(DISTINCT order_id) AS total_orders,           -- 總訂單張數\n    ROUND(AVG(discount) * 100, 2) AS avg_discount_pct   -- 平均折扣率 (%)\nFROM superstoreorders\nGROUP BY market\nORDER BY total_profit DESC;",
+      "note": "🎓 【新手全球市場分析：跨國企業的資源分配戰略】\n\n1. 商業目的：\n跨國企業最怕「在 A 國賺的辛苦錢，被 B 國的虧損全部吃掉」！做地理市場分析的目的是要衡量各大洲市場的成熟度與風險回報比。\n\n2. 白話看懂各大洲表現：\n- 🌏 **APAC（亞太區）**：全店最大金雞母！營收 358 萬美元，利潤高達 **43.6 萬美元**（毛利 12.1%）。\n- 🌍 **EU（歐洲區）**：獲利品質最健康！營收 294 萬美元，利潤 **37.3 萬美元**，毛利率高達 **12.7%**！\n- 🇺🇸 **US（美國本土）**：營收 230 萬美元，利潤 **28.6 萬美元**，毛利率 12.4%。\n- 🌎 **LATAM（拉丁美洲）**：營收 216 萬美元，利潤 22.1 萬美元，毛利率僅 **10.2%**，相對偏低。\n- 🏜️ **EMEA & Africa（中東非洲）**：訂單筆數偏少，且毛利率波動劇烈，開拓成本較高。\n\n3. 決策指引：\n公司應繼續重兵部署 APAC 與 EU 兩大成熟且利潤豐厚的市場；對 LATAM 則需檢查是否因當地關稅或物流造成毛利被侵蝕。",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "全球市場",
+        "y1_col": "總銷售額",
+        "y2_col": "總利潤"
+      }
+    },
+    {
+      "id": "geo_sql_top_profitable_countries",
+      "lang": "sql",
+      "title": "【國家排行榜】全球 Top 10 最賺錢國家 vs 獲利金額",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "folder": "05_地理區域與跨國市場 (Geographical Performance)",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL 獲利前 10 強國家 (Top 10 Profitable Countries)\n-- 學習重點：\n-- 1. ORDER BY total_profit DESC LIMIT 10：取出獲利最高的 10 個國家。\n-- 2. 特別關注這些國家的平均折扣率，通常遠低於全球平均。\n-- ==============================================================================\nSELECT \n    country,\n    market,\n    ROUND(SUM(sales), 2) AS total_sales,\n    ROUND(SUM(profit), 2) AS total_profit,\n    ROUND(SUM(profit) * 100.0 / SUM(sales), 2) AS profit_margin_pct,\n    ROUND(AVG(discount) * 100, 2) AS avg_discount_pct,\n    COUNT(DISTINCT order_id) AS total_orders\nFROM superstoreorders\nGROUP BY country, market\nORDER BY total_profit DESC\nLIMIT 10;",
+      "note": "🎓 【新手國家分析：前 10 強賺錢金牛國的共通密碼】\n\n1. 商業目的：\n找出全公司最賺錢的前 10 個國家，研究他們「為什麼賺錢」？成功的經驗能不能複製到其他市場？\n\n2. 白話看懂前 10 強榜單：\n- 🥇 第一名：美國（United States）淨利潤 **28.6 萬美元**。\n- 🥈 第二名：中國（China）淨利潤 **15.1 萬美元**。\n- 🥉 第三名：印度（India）淨利潤 **12.9 萬美元**。\n- 後續依序為：英國 (UK)、法國 (France)、德國 (Germany)、墨西哥 (Mexico)、澳洲 (Australia) 等。\n\n3. 初學者必學的破案關鍵：\n請看一下這 10 個國家的「平均折扣率 (avg_discount_pct)」：\n中國、印度、英國的平均折扣全部只有 **0% ~ 7%**！\n這揭露了一個震撼事實：**「最賺錢的國家，不是賣得最便宜的國家，而是價格最硬、不需要亂給折扣就能把東西賣掉的成熟市場！」**",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "國家",
+        "y1_col": "淨利潤總額"
+      }
+    },
+    {
+      "id": "geo_sql_top_loss_countries",
+      "lang": "sql",
+      "title": "【失血國別】全球 Top 10 最賠錢國家與折扣失控分析",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "folder": "05_地理區域與跨國市場 (Geographical Performance)",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL 巨額虧損前 10 弱國家 (Top 10 Loss-Making Countries)\n-- 學習重點：\n-- 1. WHERE 或 HAVING SUM(profit) < 0 篩選虧損國。\n-- 2. ORDER BY total_profit ASC LIMIT 10：按虧損嚴重程度由小到大 (負最多排最前)。\n-- ==============================================================================\nSELECT \n    country,\n    market,\n    ROUND(SUM(sales), 2) AS total_sales,\n    ROUND(SUM(profit), 2) AS total_profit,\n    ROUND(SUM(profit) * 100.0 / SUM(sales), 2) AS profit_margin_pct,\n    ROUND(AVG(discount) * 100, 2) AS avg_discount_pct,\n    COUNT(DISTINCT order_id) AS total_orders\nFROM superstoreorders\nGROUP BY country, market\nHAVING SUM(profit) < 0\nORDER BY total_profit ASC\nLIMIT 10;",
+      "note": "🎓 【新手失血國別分析：Kaggle 最震撼的破案發現！】\n\n1. 商業目的：\n做跨國貿易最怕「做越多賠越多」。有些海外市場訂單量很多，但實際上卻是公司的吸血水蛭！找出這些國家，並查明到底是誰在賠錢？\n\n2. 白話看懂巨額虧損前 10 弱：\n- 🩸 第一慘：**奈及利亞 (Nigeria)** —— 營收僅 5.4 萬，居然淨倒賠 **-$80,189 美元**（毛利率 -148%）！\n- 🩸 第二慘：**菲律賓 (Philippines)** —— 倒賠 -$16,128 美元。\n- 🩸 第三慘：**巴基斯坦 (Pakistan)** —— 倒賠 -$22,446 美元。\n- 其他慘賠國還包括：荷蘭 (Netherlands)、土耳其 (Turkey)、阿根廷 (Argentina) 等。\n\n3. 為什麼會賠成這樣？（真相大白）：\n看一下奈及利亞與土耳其的平均折扣率（avg_discount_pct）——**居然高達 60% 到 70%**！\n業務為了刷單打入新市場，居然讓客戶用 3 折買東西，結果每一張訂單都虧損慘重。\n👉 決策建議：立即對奈及利亞與菲律賓停止高額補貼，將折扣上限嚴格卡死在 15% 以下，不能接受的訂單直接退單！",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "國家",
+        "y1_col": "淨虧損總額"
+      }
+    },
+    {
+      "id": "ship_sql_mode_efficiency",
+      "lang": "sql",
+      "title": "【物流運送方式】標準、次日、急件、當日達的運費成本與出貨天數對比",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "folder": "06_運送模式與物流時效 (Shipping Mode & Priority)",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL 物流配送時效與運費成本分析\n-- 學習重點：\n-- 1. JULIANDAY(ship_date) - JULIANDAY(order_date) 計算下單到出貨的實際天數 (Days to Ship)。\n-- 2. 檢視每種配送等級的運費成本與毛利率是否維持穩定。\n-- ==============================================================================\nSELECT \n    ship_mode,                                          -- 4 種物流方式\n    COUNT(*) AS total_shipments,                        -- 出貨總筆數\n    ROUND(AVG(JULIANDAY(ship_date) - JULIANDAY(order_date)), 2) AS avg_days_to_ship, -- 平均出貨天數\n    ROUND(AVG(shipping_cost), 2) AS avg_shipping_cost,  -- 平均每單物流費用 (USD)\n    ROUND(SUM(sales), 2) AS total_sales,                -- 該物流方式創造的總營收\n    ROUND(SUM(profit), 2) AS total_profit,              -- 淨利潤\n    ROUND(SUM(profit) * 100.0 / SUM(sales), 2) AS profit_margin_pct -- 毛利率 (%)\nFROM superstoreorders\nGROUP BY ship_mode\nORDER BY avg_days_to_ship DESC;",
+      "note": "🎓 【新手物流分析：履約時效與運費成本的平衡】\n\n1. 商業目的：\n電商最大的後勤成本就是物流。提供「當日送達」雖然客戶很爽，但公司收的運費到底夠不夠付給物流公司？會不會因為承諾了太快的送達速度而導致獲利被侵蝕？\n\n2. 白話看懂四種物流模式：\n- `Standard Class`（標準平郵）：平均 **5.0 天**送達，每筆運費約 20 美元，佔了全店 60% 訂單，是最經濟實惠的基石。\n- `Second Class`（二日達）：平均 **3.2 天**送達，每筆運費約 30 美元。\n- `First Class`（頭等急件）：平均 **2.2 天**送達，每筆運費約 41 美元。\n- `Same Day`（當日達）：平均 **0.04 天**即時出貨，每筆運費高達 **45 美元**！\n\n3. 給初學者的健康度檢查：\n看一下四種模式的毛利率（profit_margin_pct）：全部都維持在 **11.5% 左右**！\n這證明這家超商的物流定價非常成功——當日達的運費確實有如實轉嫁給買家，沒有自己掏腰包貼錢運送的窘境。",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "運送方式",
+        "y1_col": "平均每筆運費成本_USD",
+        "y2_col": "平均出貨天數_天"
+      }
+    },
+    {
+      "id": "ship_py_priority_cost_dist",
+      "lang": "python",
+      "title": "【優先級與運費】Order Priority (Critical/High/Medium/Low) 運費分佈箱型圖",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "folder": "06_運送模式與物流時效 (Shipping Mode & Priority)",
+      "sql": "# ==============================================================================\n# 🎓 【新手教學】Python 訂單優先級與物流成本分佈\n# 學習重點：\n# 1. order 參數：按照業務邏輯依序排列 ['Critical', 'High', 'Medium', 'Low']，而非英文字母隨機排序。\n# 2. 觀察優先級是否真實反映在運費投入上。\n# ==============================================================================\nplt.figure(figsize=(10, 5), dpi=130)\n\norder_levels = ['Critical', 'High', 'Medium', 'Low']\npalette = ['#e11d48', '#f97316', '#3b82f6', '#94a3b8']\n\nsns.boxplot(\n    data=df,\n    x='order_priority',\n    y='shipping_cost',\n    order=order_levels,\n    palette=palette\n)\n\nplt.title('Superstore: 訂單優先級 (Priority) 與運費成本投入分佈檢驗', fontsize=12, fontweight='bold', pad=12)\nplt.xlabel('訂單緊急度 (Order Priority)', fontsize=10)\nplt.ylabel('物流運費金額 (Shipping Cost USD)', fontsize=10)\nplt.ylim(0, 200) # 聚焦在多數訂單的 200 美元以內區間\nplt.grid(True, linestyle='--', alpha=0.3)\nplt.tight_layout()\n\nprint(\"✅ 圖表產出完成！Critical 緊急訂單之運費分佈顯著高於 Low，履約作業十分嚴謹。\")",
+      "note": "🎓 【新手作業一致性檢驗：訂單優先級有沒有落實？】\n\n1. 商業目的：\n在 ERP 或訂單管理系統中，通常會有 `Order Priority`（優先級：Critical, High, Medium, Low）。\n分析師必須檢驗：第一線物流同仁真的有把「緊急訂單 (Critical)」用更昂貴、更快速的特快專遞送出嗎？還是只是在系統裡隨便打勾，實際上根本沒差別？\n\n2. 白話看懂圖形：\n- `Critical`（最高緊急度）的箱子位置明顯高於其他類別，平均運費顯著提高。\n- `Low`（低優先級）的箱子非常扁且貼近底部，幾乎都是走平價便宜的慢速貨運。\n👉 這證明超商的倉儲物流系統運作非常嚴謹，系統優先級與實際物流資源有高度一致性。",
+      "chart_config": {}
+    },
+    {
+      "id": "loss_sql_discount_threshold",
+      "lang": "sql",
+      "title": "【Step 3 找分界線】折扣率每 10% 分段跳升檢驗：20% 是利潤生死的黃金分界線！",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "folder": "07_虧損黑洞與促銷折扣陷阱 (Losses & Discount Impact)",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL 階梯式條件分箱 (CASE WHEN Binning)\n-- 學習重點：\n-- 1. CASE WHEN 將連續數值（折扣 0~0.85）切分成容易理解的 10% 區間。\n-- 2. 雙軸圖設定：長條看該折扣區間的訂單量，折線看利潤率如何暴跌！\n-- ==============================================================================\nSELECT \n    CASE \n        WHEN discount = 0 THEN '01. 不打折 (0%)'\n        WHEN discount > 0 AND discount <= 0.1 THEN '02. 輕度折扣 (0% ~ 10%]'\n        WHEN discount > 0.1 AND discount <= 0.2 THEN '03. 中度折扣 (10% ~ 20%]'\n        WHEN discount > 0.2 AND discount <= 0.3 THEN '04. 重度折扣 (20% ~ 30%] 💥開始虧損'\n        WHEN discount > 0.3 AND discount <= 0.5 THEN '05. 惡性折扣 (30% ~ 50%] 🩸失血'\n        ELSE '06. 崩潰折扣 (> 50%] ☠️嚴重巨虧'\n    END AS discount_tier,\n    COUNT(*) AS total_items,                            -- 該區間交易筆數\n    ROUND(SUM(sales), 2) AS total_sales,                -- 總銷售額\n    ROUND(SUM(profit), 2) AS total_profit,              -- 總利潤 (注意正轉負的轉折點！)\n    ROUND(SUM(profit) * 100.0 / SUM(sales), 2) AS margin_pct -- 毛利率 (%)\nFROM superstoreorders\nGROUP BY discount_tier\nORDER BY discount_tier ASC;",
+      "note": "🎓 【新手破案必殺技：什麼叫「找分界線 (Threshold)」？】\n\n1. 商業目的（破解業務員的話術）：\n業務員最常向老闆爭取：「老闆，這個大客戶一定要打 7 折、打 6 折，不然單子會被對手搶走！」\n老闆如果不懂數據，往往就被唬住了。數據分析師的職責，就是要用硬數據劃出一條「絕對不能退讓的生死紅線」！\n\n2. 白話看懂分段階梯表（觸目驚心的事實）：\n我們用 SQL 把折扣率每 10% 切成一段，看利潤率的變化：\n- **0% 折扣（完全不打折）**：利潤率高達 **+30.2%**，賺大錢！\n- **0.1% ~ 10% 折扣**：利潤率還有 **+23.4%**，非常健康。\n- **10% ~ 20% 折扣**：利潤率降至 **+11.4%**，勉強保本。\n- 💥 **進入 20% ~ 30% 折扣（懸崖崩塌！）**：利潤率直接跌入 **-13.8%**（開始做白工倒賠！）\n- 🩸 **超過 50% 折扣**：利潤率慘跌至 **-82.5%**！賣 100 元的東西倒貼 82 元！\n\n3. 給初學者的金句：\n**「20% 就是這家超商的生命底線！」**\n只要折扣超過 20%，每多做一張訂單，公司就往破產多邁進一步。這就是 Step 3 找分界線的威力！",
+      "chart_config": {
+        "type": "bar_line",
+        "x_col": "折扣率區間",
+        "y1_col": "虧損率百分比",
+        "y2_col": "總訂單筆數"
+      }
+    },
+    {
+      "id": "loss_py_discount_scatter",
+      "lang": "python",
+      "title": "【Python 散佈圖】折扣率 vs 利潤散佈圖與零軸失血警示線 (Scatterplot)",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "folder": "07_虧損黑洞與促銷折扣陷阱 (Losses & Discount Impact)",
+      "sql": "# ==============================================================================\n# 🎓 【新手教學】Python 促銷折扣 vs 利潤散佈圖 (Scatterplot)\n# 學習重點：\n# 1. alpha=0.3：設定散佈點透明度，避免幾萬個點重疊在一起變成一團黑。\n# 2. axhline(0)：畫出關鍵的「零利潤損益平衡線」，區隔賺錢與賠錢領域。\n# ==============================================================================\nplt.figure(figsize=(11, 5), dpi=130)\n\n# 依賺賠設定顏色\ncolors = ['#10b981' if p >= 0 else '#ef4444' for p in df['profit']]\n\nplt.scatter(\n    df['discount'],\n    df['profit'],\n    c=colors,\n    alpha=0.25,\n    s=18,\n    edgecolors='none'\n)\n\nplt.axhline(0, color='black', linestyle='--', linewidth=1.2, label='損益平衡線 (Profit = $0)')\nplt.axvline(0.2, color='#f59e0b', linestyle=':', linewidth=2, label='黃金止損線 (Discount = 20%)')\n\nplt.title('Superstore: 折扣率 vs 利潤散佈圖（折扣 > 20% 利潤瞬間墜入深淵）', fontsize=12, fontweight='bold', pad=12)\nplt.xlabel('折扣率 (Discount: 0.1 = 10%, 0.5 = 50%)', fontsize=10)\nplt.ylabel('單筆利潤 (Profit USD)', fontsize=10)\nplt.grid(True, linestyle='--', alpha=0.3)\nplt.legend(frameon=True, loc='upper right')\nplt.tight_layout()\n\nprint(\"✅ 散佈圖繪製完成！可清楚看見 20% 右側大量紅色虧損點向下俯衝。\")",
+      "note": "🎓 【新手視覺化教學：為什麼散佈圖 (Scatter Plot) 能震撼主管？】\n\n1. 商業目的：\n有時候冷冰冰的數據表格很難說服高階主管。一張具備視覺衝擊力的散佈圖，能把幾萬筆交易的「慘賠真相」直接攤在陽光下，讓人看了一秒清醒！\n\n2. 白話看懂這張圖：\n- 橫軸 (X)：折扣率（從 0% 到 85%）。\n- 縱軸 (Y)：單筆訂單的利潤金額（從 -6,000 美元到 +8,000 美元）。\n- 中間的黑色虛線：**利潤 = 0（盈虧平衡線）**。\n\n3. 震撼的視覺形態：\n初學者看圖時請注意：\n在折扣 < 0.2（20%）的左半邊，絕大多數綠點都在 0 軸上方（賺錢）；\n但只要一跨過 0.2，點群像瀑布一樣集體墜入負值深淵，最慘的訂單在折扣 70%~80% 時直接沉到 -6,000 美元！\n這張圖就是向管理層證明「促銷促到公司破產」的最強鐵證。",
+      "chart_config": {}
+    },
+    {
+      "id": "loss_sql_stop_loss_simulation",
+      "lang": "sql",
+      "title": "【Step 4 綜合驗證】止血策略模擬：嚴格守住「折扣上限 20%」可為公司挽救 84.8 萬美元淨利！",
+      "step_tag": "Step 4: 規則驗證 (Validate)",
+      "folder": "07_虧損黑洞與促銷折扣陷阱 (Losses & Discount Impact)",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL 業務策略性止血模擬 (What-if Strategy Simulation)\n-- 學習重點：\n-- 1. UNION ALL 將「現有實際業務狀況」與「執行止損策略後」並列比較。\n-- 2. 證明砍掉折扣 > 20% 的訂單，雖然營收微降，但淨利直接爆發性增長！\n-- ==============================================================================\nSELECT \n    '現有全店實際經營現狀' AS scenario,\n    ROUND(SUM(sales), 2) AS total_sales,\n    ROUND(SUM(profit), 2) AS total_profit,\n    ROUND(SUM(profit) * 100.0 / SUM(sales), 2) AS profit_margin_pct,\n    COUNT(*) AS total_orders\nFROM superstoreorders\n\nUNION ALL\n\nSELECT \n    '🎯 止血策略：嚴守折扣 <= 20% (砍掉惡性訂單)' AS scenario,\n    ROUND(SUM(sales), 2) AS total_sales,\n    ROUND(SUM(profit), 2) AS total_profit,\n    ROUND(SUM(profit) * 100.0 / SUM(sales), 2) AS profit_margin_pct,\n    COUNT(*) AS total_orders\nFROM superstoreorders\nWHERE discount <= 0.20;",
+      "note": "🎓 【新手高階技能：什麼是「情境模擬 (What-if Simulation)」？】\n\n1. 為什麼不能只當「報喜報憂的算命師」？\n初級分析師只會說：「報告老闆，我們在打折上賠了好多錢。」\n高級分析師會說：「報告老闆，我做過模擬試算，如果我們從明天起卡死折扣上限在 20%，全公司今年淨利能直接暴增 **57.8%（多賺 84.8 萬美元）**！」\n這就是將數據轉化為商業價值的最高境界！\n\n2. 白話看懂這個 What-if 模擬試算：\n- 目前現狀（現有實際）：總營收 1,264 萬美元，淨利潤 **146.7 萬美元**。\n- 止血方案（若剔除 >20% 的惡意折扣訂單）：\n  • 雖然營收少做了 166 萬美元（砍掉那些白嫖客）。\n  • 但淨利潤直接從 146.7 萬飆升至 **231.5 萬美元**！\n  • 現金淨增加整整 **+$848,458 美元（近 85 萬美金純利潤）**！\n\n3. 給初學者的啟發：\n**「不是所有的營收都是好營收。」** 懂得拒絕有毒的虧損訂單，公司的獲利能力反而會大幅躍升！",
+      "chart_config": {
+        "type": "grouped_bar",
+        "x_col": "訂單風險分類",
+        "y1_col": "總營業額",
+        "y2_col": "利潤總額"
+      }
+    },
+    {
+      "id": "loss_py_random_forest",
+      "lang": "python",
+      "title": "【機器學習驗證】隨機森林分類器：證明折扣率佔虧損成因 94.88% 的決定性戰犯！",
+      "step_tag": "Step 4: 規則驗證 (Validate)",
+      "folder": "07_虧損黑洞與促銷折扣陷阱 (Losses & Discount Impact)",
+      "sql": "# ==============================================================================\n# 🎓 【新手教學】Python 隨機森林 (Random Forest) 特徵重要性分析\n# 學習重點：\n# 1. 建立二元標籤：y = (df['profit'] < 0) 判斷這筆訂單是否虧損。\n# 2. RandomForestClassifier：非線性樹狀模型，能精準捕捉特徵對結果的貢獻權重。\n# 3. feature_importances_：輸出各特徵的影響力佔比 (總和 100%)。\n# ==============================================================================\nfrom sklearn.ensemble import RandomForestClassifier\n\ndf_rf = df.copy()\n# 建立預測目標：1 代表虧損 (賠錢訂單), 0 代表獲利\ndf_rf['is_loss'] = (df_rf['profit'] < 0).astype(int)\n\nfeatures = ['sales', 'quantity', 'discount', 'shipping_cost']\nX = df_rf[features]\ny = df_rf['is_loss']\n\n# 訓練隨機森林模型\nrf = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)\nrf.fit(X, y)\n\n# 整理特徵重要性權重表\nimportance_df = pd.DataFrame({\n    '特徵欄位 (Feature)': features,\n    '影響力權重 (Importance %)': (rf.feature_importances_ * 100).round(2)\n}).sort_values(by='影響力權重 (Importance %)', ascending=False).reset_index(drop=True)\n\n# 繪製特徵重要性長條圖\nplt.figure(figsize=(9, 4), dpi=130)\nsns.barplot(data=importance_df, x='影響力權重 (Importance %)', y='特徵欄位 (Feature)', palette='Reds_r')\nplt.title('機器學習歸因：導致訂單「嚴重虧損」的關鍵特徵重要性排行', fontsize=12, fontweight='bold', pad=12)\nplt.xlabel('重要性佔比 (%)', fontsize=10)\nplt.xlim(0, 100)\nplt.grid(True, linestyle='--', alpha=0.3)\nplt.tight_layout()\n\nprint(\"=== 隨機森林特徵重要性排名 ===\")\nfor _, r in importance_df.iterrows():\n    print(f\"👉 {r['特徵欄位 (Feature)']}: {r['影響力權重 (Importance %)']}%\")\n\nimportance_df",
+      "note": "🎓 【新手機器學習歸因：用演算法找出「頭號戰犯」】\n\n1. 商業目的（讓數學說話，杜絕藉口）：\n當你指出促銷賠錢時，業務主管可能會辯解：「那是因為運費太貴啦、或是客戶買太少件啦！」\n這時我們用隨機森林模型（Random Forest）計算「特徵重要性 (Feature Importance)」，讓演算法用客觀機率告訴大家誰才是真正的罪魁禍首。\n\n2. 白話看懂機器學習結果：\n模型評估了銷額、件數、折扣、運費 4 個維度，對「是否虧損 (is_loss)」的影響力：\n- 🥇 **discount（折扣率）**：**94.88%**（壓倒性奪冠！）\n- 🥈 sales（銷售額）：2.76%\n- 🥉 shipping_cost（運費）：1.43%\n- 🏅 quantity（件數）：0.93%\n\n3. 初學者學習總結：\n數據分析 4 步思考法走完全程：\n從 Step 1 看大盤 -> Step 2 抓出 Tables 虧損 -> Step 3 找出 20% 折扣紅線 -> Step 4 用隨機森林徹底證實 Discount 佔了 95% 的成因！這就是一套無懈可擊的商業分析報告。",
+      "chart_config": {}
+    },
+    {
+      "id": "top_sql_products",
+      "lang": "sql",
+      "title": "【單品排行榜】全店 Top 10 最賺錢明星商品 vs Top 10 虧損黑洞商品",
+      "step_tag": "Step 4: 規則驗證 (Validate)",
+      "folder": "08_暢銷商品與頂級顧客榜 (Top Products & Customers)",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL Top 10 賺錢明星 vs 賠錢地雷單品 (UNION ALL)\n-- 學習重點：\n-- 1. 分別用 LIMIT 10 取出利潤最高與最低的單一型號產品。\n-- 2. 結合產品品類與子品類，為第一線採購提供最精準的 SKU 下架指引。\n-- ==============================================================================\nSELECT * FROM (\n    SELECT \n        '🏆 全店最賺錢 Top 10 明星商品' AS list_type,\n        product_name,\n        category,\n        sub_category,\n        ROUND(SUM(sales), 2) AS total_sales,\n        ROUND(SUM(profit), 2) AS total_profit,\n        ROUND(AVG(discount) * 100, 2) AS avg_discount_pct\n    FROM superstoreorders\n    GROUP BY product_name, category, sub_category\n    ORDER BY total_profit DESC\n    LIMIT 10\n)\n\nUNION ALL\n\nSELECT * FROM (\n    SELECT \n        '💣 全店最虧錢 Top 10 虧損黑洞' AS list_type,\n        product_name,\n        category,\n        sub_category,\n        ROUND(SUM(sales), 2) AS total_sales,\n        ROUND(SUM(profit), 2) AS total_profit,\n        ROUND(AVG(discount) * 100, 2) AS avg_discount_pct\n    FROM superstoreorders\n    GROUP BY product_name, category, sub_category\n    ORDER BY total_profit ASC\n    LIMIT 10\n);",
+      "note": "🎓 【新手單品分析：採購主管必備的黑白名單】\n\n1. 商業目的：\n大方向的品類清楚後，第一線採購（Buyer）明天進辦公室到底該向哪家工廠下單？該把哪款型號的商品徹底下架停售？這需要精確到「商品名稱 (product_name)」的黑白名單。\n\n2. 白話看懂單品榜單：\n- 🏆 **全店最賺錢明星單品（白名單）**：\n  `Canon imageCLASS 2200 Advanced Copier`（進階多功能影印機）\n  單一型號為全店賺進 **$25,199 美元** 淨利潤，毛利率超過 40%，是當之無愧的王牌旗艦！\n- 💣 **全店最虧錢黑洞單品（黑名單）**：\n  `Cubify CubeX 3D Printer Double Head`（3D 雙頭列印機）\n  單一型號巨額虧損 **-$8,879 美元**！這款產品因技術不成熟、退貨率高、業務又給了誇張折扣，成了全店最毒的地雷。\n\n3. 業務落地決策：\n採購部門應立即將 Cubify 列印機從供應商合約中剔除，並針對 Canon 影印機爭取原廠更大規模的批量採購折扣。",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "商品名稱",
+        "y1_col": "累計淨利潤"
+      }
+    },
+    {
+      "id": "top_py_customer_pareto",
+      "lang": "python",
+      "title": "【帕累托 80/20】顧客累計營收貢獻度曲線 (Pareto Curve)",
+      "step_tag": "Step 4: 規則驗證 (Validate)",
+      "folder": "08_暢銷商品與頂級顧客榜 (Top Products & Customers)",
+      "sql": "# ==============================================================================\n# 🎓 【新手教學】Python 帕累托 80/20 累積貢獻曲線繪製\n# 學習重點：\n# 1. cumsum()：計算數值的累積總和 (Cumulative Sum)。\n# 2. 將顧客按貢獻金額排序後，計算「累積人數 %」與「累積營收 %」。\n# ==============================================================================\ncust_summary = df.groupby('customer_name')['sales'].sum().sort_values(ascending=False).reset_index()\n\ncust_summary['cum_sales'] = cust_summary['sales'].cumsum()\ncust_summary['cum_sales_pct'] = (cust_summary['cum_sales'] / cust_summary['sales'].sum()) * 100\ncust_summary['cust_pct'] = (cust_summary.index + 1) / len(cust_summary) * 100\n\nplt.figure(figsize=(10, 5), dpi=130)\nplt.plot(cust_summary['cust_pct'], cust_summary['cum_sales_pct'], color='#6366f1', linewidth=2.5, label='顧客營收累積曲線 (Pareto Curve)')\nplt.plot([0, 100], [0, 100], color='#94a3b8', linestyle='--', label='完全均等對角基準線')\n\n# 標記 20% 關鍵節點\nv20_sales = cust_summary[cust_summary['cust_pct'] <= 20]['cum_sales_pct'].iloc[-1]\nplt.scatter([20], [v20_sales], color='#e11d48', s=60, zorder=5)\nplt.axvline(20, color='#e11d48', linestyle=':', alpha=0.6)\nplt.axhline(v20_sales, color='#e11d48', linestyle=':', alpha=0.6)\n\nplt.annotate(\n    f'前 20% 頂級 VIP 顧客\n貢獻了 {v20_sales:.1f}% 的總營業額！',\n    xy=(20, v20_sales),\n    xytext=(35, v20_sales - 15),\n    arrowprops=dict(facecolor='#e11d48', shrink=0.08, width=1.5, headwidth=6),\n    fontsize=10,\n    fontweight='bold',\n    color='#e11d48',\n    bbox=dict(boxstyle='round,pad=0.5', facecolor='#fee2e2', edgecolor='#e11d48')\n)\n\nplt.title('Superstore: 顧客營收貢獻度帕累托分析 (Pareto 80/20 Curve)', fontsize=12, fontweight='bold', pad=12)\nplt.xlabel('顧客累計人數佔比 (%)', fontsize=10)\nplt.ylabel('營業額累計貢獻佔比 (%)', fontsize=10)\nplt.xlim(0, 100)\nplt.ylim(0, 105)\nplt.grid(True, linestyle='--', alpha=0.3)\nplt.legend(frameon=True, loc='lower right')\nplt.tight_layout()\n\nprint(\"✅ 帕累托累積曲線繪製完成！前 20% VIP 貢獻了過半營收。\")",
+      "note": "🎓 【新手 VIP 顧客分析：什麼是「帕累托 80/20 法則」？】\n\n1. 商業目的（CRM 會員經營的起手式）：\n商業世界有一條金科玉律：「80% 的營收往往來自 20% 的核心客戶」。\n如果不做帕累托分析，客服與業務就會把寶貴的時間平均分給所有人，導致沒時間服務真正的大客戶。\n\n2. 白話看懂累積曲線（Pareto Curve）：\n- 橫軸：顧客累計人數百分比（由貢獻最大的 VIP 排到最小的小散客）。\n- 縱軸：全店累計營業額貢獻百分比（0% 到 100%）。\n- 圖中的弧線爬升得非常陡峭：前 20% 的頂級顧客，就為公司創造了 **近 55% 的總營收**！\n\n3. 給業務與行銷主管的具體指引：\n- 為前 20% 的 VIP 顧客建立專屬客戶經理（Account Manager），提供專屬報價與免運服務。\n- 公司的業務重點不是盲目拉新客，而是死死守住這 20% 的核心 VIP，他們的續約與回購就是公司最強大的護城河！",
+      "chart_config": {}
+    },
+    {
+      "id": "st1_lesson_01",
+      "lang": "python",
+      "title": "ST1-01｜從一列資料開始：明細、訂單與品質",
+      "step_tag": "ST1 第 1 課",
+      "folder": "ST1_01_認識資料與品質",
+      "sql": "# 平台已把目前資料表載入 df；每一列是訂單中的一筆商品明細。\nprint('明細列數：', len(df))\nprint('欄位數：', len(df.columns))\nprint('不重複訂單數：', df['order_id'].nunique())\nprint('空值總數：', int(df.isna().sum().sum()))\nprint('完全重複列數：', int(df.duplicated().sum()))\ndates = pd.to_datetime(df['order_date'])\nprint('日期範圍：', dates.min().date(), '至', dates.max().date())\nprint('年份與日期不符：', int((df['year'] != dates.dt.year).sum()))\ndf[['order_id', 'order_date', 'category', 'sales', 'profit']].head(10)",
+      "note": "【學習目標】先確認一列資料代表什麼，再談指標。這份檔案有 51,290 列、21 欄，但只有 25,035 張不同的訂單；同一 order_id 可有多筆商品明細。因此「訂單數」要用 nunique()，不能直接用 len(df)。\n\n【結果怎麼讀】空值 0、完全重複列 0、日期 2011-01-01 至 2014-12-31，year 與日期年份不符為 0。品質檢查通過只代表資料可開始分析，不代表 sales、profit 的業務定義已核實。\n\n【自己試】把最後一行改成 df[['order_id','product_name','quantity']].head(10)，觀察同一訂單是否有多種商品。",
+      "chart_config": {}
+    },
+    {
+      "id": "st1_lesson_02",
+      "lang": "sql",
+      "title": "ST1-02｜用 SQL 算對分母與全店指標",
+      "step_tag": "ST1 第 2 課",
+      "folder": "ST1_01_認識資料與品質",
+      "sql": "-- COUNT(*) 是明細列數；COUNT(DISTINCT order_id) 才是訂單數。\nSELECT COUNT(*) AS 明細列數,\n       COUNT(DISTINCT order_id) AS 訂單數,\n       SUM(sales) AS 銷售額,\n       ROUND(SUM(profit), 2) AS 利潤,\n       ROUND(100.0 * SUM(profit) / NULLIF(SUM(sales), 0), 2) AS 利潤率百分比,\n       ROUND(1.0 * SUM(sales) / NULLIF(COUNT(DISTINCT order_id), 0), 2) AS 每張訂單平均銷售額\nFROM superstoreorders;",
+      "note": "【學習目標】理解 COUNT、COUNT(DISTINCT)、SUM 與加權利潤率。全店銷售額為 12,642,905，利潤為 1,469,034.82，利潤率 11.62%。金額沿用來源資料的單位，尚未核實幣別與利潤成本口徑。\n\n【公式】整體利潤率 = 利潤總和 ÷ 銷售額總和 × 100%。不要先算每列利潤率再取簡單平均，因為大單和小單會被給同樣權重。\n\n【自己試】把 COUNT(DISTINCT order_id) 改成 COUNT(*)，看「每張訂單平均銷售額」如何變化，並說明這個新分母為何錯誤。",
+      "chart_config": {}
+    },
+    {
+      "id": "st1_lesson_03",
+      "lang": "sql",
+      "title": "ST1-03｜年度趨勢：銷售成長和利潤率分開看",
+      "step_tag": "ST1 第 3 課",
+      "folder": "ST1_02_全店與年度趨勢",
+      "sql": "SELECT year AS 年度,\n       COUNT(DISTINCT order_id) AS 訂單數,\n       SUM(sales) AS 銷售額,\n       ROUND(SUM(profit), 2) AS 利潤,\n       ROUND(100.0 * SUM(profit) / NULLIF(SUM(sales), 0), 2) AS 利潤率百分比\nFROM superstoreorders\nGROUP BY year\nORDER BY year;",
+      "note": "【學習目標】用 GROUP BY 把全店指標拆成年度；先看規模，再看效率。2011–2014 銷售額依序為 2,259,511、2,677,493、3,405,860、4,300,041，逐年增加。2014 利潤達 504,165.97，但利潤率 11.72%，比 2013 的 11.99% 低 0.27 個百分點。\n\n【判讀】利潤金額增加，不等於利潤率改善。要比較年增率，公式是 (本年銷售額 ÷ 去年銷售額 - 1) × 100%。\n\n【自己試】把 year 改成 strftime('%m', order_date)，看看哪些月份的銷售額較高。",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "年度",
+        "y1_col": "銷售額",
+        "y2_col": "利潤"
+      }
+    },
+    {
+      "id": "st1_lesson_04",
+      "lang": "python",
+      "title": "ST1-04｜用 Python 畫年度銷售與利潤率",
+      "step_tag": "ST1 第 4 課",
+      "folder": "ST1_02_全店與年度趨勢",
+      "sql": "# groupby 把同一年所有明細彙總，利潤率用彙總後的數字計算。\nannual = df.groupby('year', as_index=False).agg(\n    sales=('sales', 'sum'), profit=('profit', 'sum'),\n    orders=('order_id', 'nunique'))\nannual['margin_pct'] = annual['profit'] / annual['sales'] * 100\nannual['sales_yoy_pct'] = annual['sales'].pct_change() * 100\nfig, ax1 = plt.subplots(figsize=(9, 4))\nax1.bar(annual['year'].astype(str), annual['sales'], color='#4f46e5')\nax1.set_ylabel('Sales')\nax2 = ax1.twinx()\nax2.plot(annual['year'].astype(str), annual['margin_pct'], color='#dc2626', marker='o')\nax2.set_ylabel('Profit margin (%)')\nplt.title('Annual sales and profit margin')\nplt.tight_layout()\nannual.round(2)",
+      "note": "【學習目標】學會 groupby、agg、年增率 pct_change 與雙軸圖。柱高代表銷售規模，折線代表利潤率；兩條軸單位不同，不能直接比較高度。\n\n【關鍵結果】2012、2013、2014 的銷售額年增率約 18.50%、27.20%、26.25%；2014 銷售額繼續成長，但利潤率略回落。第一年沒有上一年資料，所以年增率顯示空值，這是正常的。\n\n【自己試】將圖上的 sales 改成 profit，觀察柱狀圖的問題是否變成「利潤金額是否成長」。",
+      "chart_config": {}
+    },
+    {
+      "id": "st1_lesson_05",
+      "lang": "sql",
+      "title": "ST1-05｜找到獲利弱點：大類再到子類",
+      "step_tag": "ST1 第 5 課",
+      "folder": "ST1_03_品類與折扣風險",
+      "sql": "SELECT category AS 大類,\n       sub_category AS 子類,\n       COUNT(*) AS 明細列數,\n       SUM(sales) AS 銷售額,\n       ROUND(SUM(profit), 2) AS 利潤,\n       ROUND(100.0 * SUM(profit) / NULLIF(SUM(sales), 0), 2) AS 利潤率百分比,\n       ROUND(100.0 * SUM(CASE WHEN profit < 0 THEN 1 ELSE 0 END) / COUNT(*), 2) AS 虧損明細比例百分比\nFROM superstoreorders\nGROUP BY category, sub_category\nORDER BY 利潤 ASC;",
+      "note": "【學習目標】先分大類，再往子類鑽，不要只看全店平均。家具類銷售額 4,110,884、利潤率 6.98%，低於全店 11.62%。其中 Tables 子類銷售額 757,034、利潤 -64,083.39、利潤率 -8.47%，是 17 個子類中唯一總利潤為負的類別。\n\n【為何看規模】一個利潤率很低但銷售很小的品類，總影響可能有限。Tables 同時有相當的銷售額和負利潤，值得優先調查。\n\n【自己試】改成 ORDER BY 銷售額 DESC，比較最熱賣的子類與最賺錢的子類是否相同。",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "子類",
+        "y1_col": "利潤",
+        "y2_col": "銷售額"
+      }
+    },
+    {
+      "id": "st1_lesson_06",
+      "lang": "sql",
+      "title": "ST1-06｜折扣分層：看清楚虧損集中在哪裡",
+      "step_tag": "ST1 第 6 課",
+      "folder": "ST1_03_品類與折扣風險",
+      "sql": "WITH banded AS (\n  SELECT *, CASE\n    WHEN discount = 0 THEN '0%'\n    WHEN discount < 0.2 THEN '>0% to <20%'\n    WHEN discount < 0.4 THEN '20% to <40%'\n    ELSE '40% or more' END AS 折扣組\n  FROM superstoreorders\n)\nSELECT 折扣組,\n       COUNT(*) AS 明細列數,\n       SUM(sales) AS 銷售額,\n       ROUND(SUM(profit), 2) AS 利潤,\n       ROUND(100.0 * SUM(profit) / NULLIF(SUM(sales), 0), 2) AS 利潤率百分比,\n       ROUND(100.0 * SUM(CASE WHEN profit < 0 THEN 1 ELSE 0 END) / COUNT(*), 2) AS 虧損明細比例百分比\nFROM banded\nGROUP BY 折扣組\nORDER BY CASE 折扣組 WHEN '0%' THEN 1 WHEN '>0% to <20%' THEN 2\n          WHEN '20% to <40%' THEN 3 ELSE 4 END;",
+      "note": "【學習目標】用 CASE WHEN 定義互斥分組，讓每筆明細只進一組。0%、(0%,20%)、[20%,40%)、[40%,100%] 是本課邊界；剛好 20% 進第三組。\n\n【結果】40% 以上組有 10,138 列、銷售額 1,405,892、利潤 -771,159.48，虧損明細比例 92.91%。這是值得關注的關聯，不能說「折扣造成虧損」或直接估算取消折扣後的利潤。高折扣可能集中在難賣品、特定市場或清倉活動。\n\n【自己試】改成每 10% 一組，比較結果是否仍然連續變化；記得明確說出邊界。",
+      "chart_config": {
+        "type": "bar",
+        "x_col": "折扣組",
+        "y1_col": "虧損明細比例百分比",
+        "y2_col": "明細列數"
+      }
+    },
+    {
+      "id": "st1_lesson_07",
+      "lang": "python",
+      "title": "ST1-07｜同品類比較折扣，練習避免誤判",
+      "step_tag": "ST1 第 7 課",
+      "folder": "ST1_03_品類與折扣風險",
+      "sql": "# 在每一個子品類內比較高折扣與其他明細。\nwork = df[['sub_category', 'discount', 'sales', 'profit']].copy()\nwork['discount_band'] = work['discount'].ge(0.4).map({True: '40% or more', False: 'below 40%'})\ncomparison = work.groupby(['sub_category', 'discount_band'], as_index=False).agg(\n    rows=('sales', 'size'), sales=('sales', 'sum'), profit=('profit', 'sum'))\ncomparison['margin_pct'] = comparison['profit'] / comparison['sales'] * 100\ncomparison.sort_values(['sub_category', 'discount_band']).round(2)",
+      "note": "【學習目標】避免把不同商品組成混在一起比較。這一步固定子品類，再比較折扣組；每一組的 rows 也要看，太小的樣本不宜下強結論。\n\n【解讀限制】即使在同一子品類內高折扣仍伴隨低利潤率，也只是更細的觀察。沒有商品成本、活動目的和需求變化，就無法推論「若不打折會賺多少」。\n\n【自己試】將 sub_category 改成 market，或同時以 ['market','sub_category','discount_band'] 分組，看看哪些組別資料太少。",
+      "chart_config": {}
+    },
+    {
+      "id": "st1_lesson_08",
+      "lang": "python",
+      "title": "ST1-08｜寫出一頁分析結論並提出下一步",
+      "step_tag": "ST1 第 8 課",
+      "folder": "ST1_04_分析結論與練習",
+      "sql": "overall_sales = df['sales'].sum()\noverall_profit = df['profit'].sum()\ncategory = df.groupby('category').agg(sales=('sales', 'sum'), profit=('profit', 'sum'))\ncategory['margin_pct'] = category['profit'] / category['sales'] * 100\nsubcategory = df.groupby('sub_category').agg(sales=('sales', 'sum'), profit=('profit', 'sum'))\nhigh_discount = df[df['discount'] >= 0.4]\nprint(f'全店銷售額 {overall_sales:,.0f}，利潤 {overall_profit:,.2f}，利潤率 {overall_profit/overall_sales*100:.2f}%')\nprint(f'家具類利潤率 {category.loc[\"Furniture\", \"margin_pct\"]:.2f}%')\nprint(f'Tables 子類利潤 {subcategory.loc[\"Tables\", \"profit\"]:,.2f}')\nprint(f'40% 以上折扣組利潤 {high_discount[\"profit\"].sum():,.2f}，虧損明細比例 {(high_discount[\"profit\"] < 0).mean()*100:.2f}%')\nprint('下一步：核對利潤口徑；按市場、年份、商品分層；再評估定價實驗。')\ncategory.round(2)",
+      "note": "【本系列結論】2011–2014 銷售額逐年成長；家具類利潤率 6.98%，其中 Tables 子類總利潤 -64,083.39。40% 以上折扣組虧損集中，但不能由此推導調價後的利潤。\n\n【像分析師一樣報告】先講分析範圍與分母，再講事實數字，最後講限制與行動。建議下一輪請財務確認 profit 是否包含運費、退貨與其他成本；請業務確認高折扣的用途；按市場、年份與商品分層。若要估計調價效果，還需要需求變化或實驗資料。\n\n【給新手的練習】用一句話分別回答：(1) 哪個數字是事實？(2) 哪個是可能解釋？(3) 接下來要補哪種資料？請避免把「相關」寫成「造成」。",
+      "chart_config": {}
+    }
+  ]
+}

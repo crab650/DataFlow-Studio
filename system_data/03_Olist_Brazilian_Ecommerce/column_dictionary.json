@@ -1,0 +1,206 @@
+{
+  "olist_orders_dataset": {
+    "order_id": {
+      "zh": "訂單編號",
+      "purpose": "每張訂單的唯一鍵；連結商品明細、付款與評價表。"
+    },
+    "customer_id": {
+      "zh": "顧客資料編號",
+      "purpose": "連結顧客表；跨訂單辨識同一顧客請使用 customer_unique_id。"
+    },
+    "order_status": {
+      "zh": "訂單狀態",
+      "purpose": "例如 delivered、canceled；分析收入或物流時先決定要包含哪些狀態。"
+    },
+    "order_purchase_timestamp": {
+      "zh": "下單時間",
+      "purpose": "訂單建立時間；可用於月度訂單趨勢。"
+    },
+    "order_approved_at": {
+      "zh": "付款核准時間",
+      "purpose": "訂單付款獲核准的時間；可能為空。"
+    },
+    "order_delivered_carrier_date": {
+      "zh": "交給物流時間",
+      "purpose": "賣家將商品交給物流業者的時間；可能為空。"
+    },
+    "order_delivered_customer_date": {
+      "zh": "實際送達時間",
+      "purpose": "顧客收到商品的時間；未送達訂單通常為空。"
+    },
+    "order_estimated_delivery_date": {
+      "zh": "預計送達日期",
+      "purpose": "資料中的預計交貨日；可與實際送達日比較準時率。"
+    }
+  },
+  "olist_customers_dataset": {
+    "customer_id": {
+      "zh": "顧客資料編號",
+      "purpose": "對應 orders.customer_id；在此資料中偏向訂單層級顧客資料。"
+    },
+    "customer_unique_id": {
+      "zh": "顧客唯一識別碼",
+      "purpose": "跨訂單辨識同一顧客；計算回購顧客時使用。"
+    },
+    "customer_zip_code_prefix": {
+      "zh": "顧客郵遞區號前綴",
+      "purpose": "收件地郵遞區號前綴；不是完整地址。"
+    },
+    "customer_city": {
+      "zh": "顧客城市",
+      "purpose": "顧客所在地城市；分析買方地域分布。"
+    },
+    "customer_state": {
+      "zh": "顧客州別",
+      "purpose": "顧客所在地州；不要與 seller_state 混淆。"
+    }
+  },
+  "olist_order_items_dataset": {
+    "order_id": {
+      "zh": "訂單編號",
+      "purpose": "對應 orders.order_id；同一訂單可出現多筆商品明細。"
+    },
+    "order_item_id": {
+      "zh": "訂單內明細序號",
+      "purpose": "同一 order_id 內的商品明細順序，單獨使用並非全表唯一鍵。"
+    },
+    "product_id": {
+      "zh": "商品編號",
+      "purpose": "對應 products.product_id；用於查類別與商品屬性。"
+    },
+    "seller_id": {
+      "zh": "賣家編號",
+      "purpose": "對應 sellers.seller_id；用於分析賣方地域。"
+    },
+    "shipping_limit_date": {
+      "zh": "出貨期限",
+      "purpose": "賣家需完成出貨的期限；不是實際送達日。"
+    },
+    "price": {
+      "zh": "商品明細價格",
+      "purpose": "該商品明細的售價；彙總後是商品銷售額，不等於利潤。"
+    },
+    "freight_value": {
+      "zh": "明細運費",
+      "purpose": "該商品明細的運費；整張訂單需按 order_id 加總。"
+    }
+  },
+  "olist_order_payments_dataset": {
+    "order_id": {
+      "zh": "訂單編號",
+      "purpose": "對應 orders.order_id；一張訂單可能有多筆付款紀錄。"
+    },
+    "payment_sequential": {
+      "zh": "付款序號",
+      "purpose": "同一訂單內的付款順序。"
+    },
+    "payment_type": {
+      "zh": "付款方式",
+      "purpose": "例如信用卡、boleto、voucher；一張訂單可混用付款方式。"
+    },
+    "payment_installments": {
+      "zh": "分期數",
+      "purpose": "付款紀錄的分期次數。"
+    },
+    "payment_value": {
+      "zh": "付款金額",
+      "purpose": "單筆付款紀錄金額；整單付款額需按 order_id 加總。"
+    }
+  },
+  "olist_order_reviews_dataset": {
+    "review_id": {
+      "zh": "評價編號",
+      "purpose": "評價資料識別碼；分析訂單評價時仍須注意同單可能有多筆紀錄。"
+    },
+    "order_id": {
+      "zh": "訂單編號",
+      "purpose": "對應 orders.order_id；可連結送達時間與評分。"
+    },
+    "review_score": {
+      "zh": "評價分數",
+      "purpose": "顧客給的 1～5 分評價。"
+    },
+    "review_comment_title": {
+      "zh": "評價標題",
+      "purpose": "顧客的文字標題；可能為空。"
+    },
+    "review_comment_message": {
+      "zh": "評價內文",
+      "purpose": "顧客的文字內容；可能為空。"
+    },
+    "review_creation_date": {
+      "zh": "評價建立日期",
+      "purpose": "評價建立時間。"
+    },
+    "review_answer_timestamp": {
+      "zh": "評價填寫時間",
+      "purpose": "顧客提交評價答案的時間。"
+    }
+  },
+  "olist_products_dataset": {
+    "product_id": {
+      "zh": "商品編號",
+      "purpose": "對應 order_items.product_id。"
+    },
+    "product_category_name": {
+      "zh": "商品類別葡文名稱",
+      "purpose": "可連結類別翻譯表取得英文名稱；部分商品可能缺類別。"
+    },
+    "product_name_lenght": {
+      "zh": "商品名稱長度",
+      "purpose": "商品名稱字元長度；原始資料欄名保留 lenght 拼字。"
+    },
+    "product_description_lenght": {
+      "zh": "商品說明長度",
+      "purpose": "商品說明字元長度；原始資料欄名保留 lenght 拼字。"
+    },
+    "product_photos_qty": {
+      "zh": "商品照片數",
+      "purpose": "商品頁面的照片張數。"
+    },
+    "product_weight_g": {
+      "zh": "商品重量（克）",
+      "purpose": "商品重量，單位為克。"
+    },
+    "product_length_cm": {
+      "zh": "商品長度（公分）",
+      "purpose": "商品尺寸長度，單位為公分。"
+    },
+    "product_height_cm": {
+      "zh": "商品高度（公分）",
+      "purpose": "商品尺寸高度，單位為公分。"
+    },
+    "product_width_cm": {
+      "zh": "商品寬度（公分）",
+      "purpose": "商品尺寸寬度，單位為公分。"
+    }
+  },
+  "olist_sellers_dataset": {
+    "seller_id": {
+      "zh": "賣家編號",
+      "purpose": "對應 order_items.seller_id。"
+    },
+    "seller_zip_code_prefix": {
+      "zh": "賣家郵遞區號前綴",
+      "purpose": "賣家所在地郵遞區號前綴。"
+    },
+    "seller_city": {
+      "zh": "賣家城市",
+      "purpose": "賣家所在地城市；不是顧客收件城市。"
+    },
+    "seller_state": {
+      "zh": "賣家州別",
+      "purpose": "賣家所在地州；不是顧客州別。"
+    }
+  },
+  "product_category_name_translation": {
+    "product_category_name": {
+      "zh": "商品類別葡文名稱",
+      "purpose": "對應 products.product_category_name。"
+    },
+    "product_category_name_english": {
+      "zh": "商品類別英文名稱",
+      "purpose": "翻譯後類別；若缺值，分析時可回退到葡文名稱。"
+    }
+  }
+}
