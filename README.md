@@ -67,6 +67,7 @@ df.groupby('category')[['sales', 'profit']].sum().round(2)
 | 02 | Global Superstore 零售分析 | `superstoreorders` 51,290 筆；分析銷售、利潤、品類、地區與折扣 | 30 則 SQL／Python 筆記（含 8 則 ST1 入門練習）、21 個欄位解說 | 選 `02_Superstore_Sales` → `superstoreorders` |
 | 03 | Olist 巴西電商多表分析 | 8 張核心表，訂單表 99,441 筆；分析訂單、顧客、商品、付款、評價與回購 | 12 則專題 SQL 課程（訂單表共 20 則筆記）、47 個欄位解說 | 選 `03_Olist_Brazilian_Ecommerce` → `olist_orders_dataset`；[課程說明](docs/olist_sql_course.md) |
 | 04 | 飯店預訂需求與取消率分析 | `hotel_bookings` 119,390 筆；分析取消率流失、淡旺季定價 ADR、90天預訂門檻、前台 BI 戰情室與第一線日常作業工單 | 19 則新手教學 SQL／Python 筆記（橫跨 7 大分析主題）、32 個欄位解說 | 選 `04_Hotel_Booking_Analytics` → `hotel_bookings` |
+| 05 | 紐約連鎖咖啡店門市營運分析 | `coffee_shop_sales` 149,116 筆；分析早尖峰出杯瓶頸、咖啡師排班、品類 Pareto 80/20、早餐搭售率與門市晨會 BI | 10 則新手教學 SQL／Python 筆記（橫跨 5 大分析主題）、12 個欄位解說 | 選 `05_Coffee_Shop_Sales` → `coffee_shop_sales` |
 
 **更新規則：** 以後每新增一個分析數據的專案，就在這張表增加一列並依序編號。平台功能、單一檔案、課程或欄位字典都屬於專案內容，不另外佔一列；已有專案新增分析成果時，更新該專案原有的列。這項規則也記在根目錄的 `AGENTS.md`。
 
@@ -105,6 +106,7 @@ python -m unittest discover -s tests -v
 - Superstore 的 21 欄版本對應 [SuperStore Sales Analytics](https://www.kaggle.com/datasets/thuandao/superstore-sales-analytics)。
 - Olist 資料來自 [Brazilian E-Commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)；官方 Kaggle API 將其授權標示為 **CC BY-NC-SA 4.0**。來源及匯入範圍另記於 `datasets/03_Olist_Brazilian_Ecommerce/SOURCE.md`。
 - 飯店預訂資料來自 [Hotel Booking Demand](https://www.kaggle.com/datasets/jessemostipak/hotel-booking-demand)（Antonio et al., 2019），授權為 **CC0: Public Domain**。詳細說明記於 `datasets/04_Hotel_Booking_Analytics/SOURCE.md`。
+- 咖啡店銷售資料來自 [Coffee Shop Sales Analysis](https://raw.githubusercontent.com/thedatanook/Coffee-Shop-Sales-Analysis/main/Coffee%20Shop%20Sales.csv)（Maven Analytics），詳細說明記於 `datasets/05_Coffee_Shop_Sales/SOURCE.md`。
 
 各資料夾的 `SOURCE.md` 記載資料來源與授權。儲存庫未宣告應用程式程式碼的開源授權；請分別遵守各資料集的授權條款。
 

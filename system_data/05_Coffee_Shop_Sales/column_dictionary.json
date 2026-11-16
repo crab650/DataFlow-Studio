@@ -1,0 +1,52 @@
+{
+  "coffee_shop_sales": {
+    "transaction_id": {
+      "name_zh": "交易編號",
+      "purpose": "唯一交易識別碼，用於統計總點餐筆數、客流量與客單價計算。"
+    },
+    "transaction_date": {
+      "name_zh": "交易日期",
+      "purpose": "訂單成交日期 (YYYY-MM-DD)，用於月度營收成長、週末 vs 平日營運對比。"
+    },
+    "transaction_time": {
+      "name_zh": "交易時間",
+      "purpose": "訂單成交時間戳 (HH:MM:SS)，用於拆解早尖峰 (07:00~10:00)、午間與下午茶離尖峰時段。"
+    },
+    "transaction_qty": {
+      "name_zh": "購買杯數/份數",
+      "purpose": "單筆購買的商品數量（杯數或烘焙份數），用於評估大宗點購與人均杯數。"
+    },
+    "store_id": {
+      "name_zh": "門市代號",
+      "purpose": "咖啡店分店編號 (1: Astoria, 2: Lower Manhattan, 3: Hell's Kitchen)。"
+    },
+    "store_location": {
+      "name_zh": "門市據點名稱",
+      "purpose": "門市所在商圈（地獄廚房商務區、下曼哈頓金融區、阿斯托利亞住宅休閒區），用於跨店業績競賽與商圈特性分析。"
+    },
+    "product_id": {
+      "name_zh": "商品編號",
+      "purpose": "各項咖啡、茶飲或烘焙點心的唯一代碼。"
+    },
+    "unit_price": {
+      "name_zh": "單價 (美元)",
+      "purpose": "每杯飲料或單件餐點的銷售定價 (USD)。"
+    },
+    "line_item_amount": {
+      "name_zh": "單品項小計 (美元)",
+      "purpose": "該商品列總金額 (數量 * 單價)，為營收營運分析之核心核心指標。"
+    },
+    "product_category": {
+      "name_zh": "商品大類",
+      "purpose": "主力商品分類（Coffee 咖啡、Tea 茶飲、Bakery 烘焙、Drinking Chocolate 熱巧克力、Flavours 風味糖漿等）。"
+    },
+    "product_type": {
+      "name_zh": "商品次類別",
+      "purpose": "精細化品項（Gourmet brewed coffee 經典現滴、Barista Espresso 義式濃縮拿鐵、Scone 司康、Biscotti 脆餅等）。"
+    },
+    "product_detail": {
+      "name_zh": "商品規格與品名",
+      "purpose": "詳細飲品名稱與杯型尺寸（例如 Ethiopia Rg 中杯、Dark chocolate Lg 大杯），用於杯型偏好與咖啡豆產區分析。"
+    }
+  }
+}

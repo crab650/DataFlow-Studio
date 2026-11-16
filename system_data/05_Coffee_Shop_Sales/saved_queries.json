@@ -1,0 +1,94 @@
+{
+  "coffee_shop_sales": [
+    {
+      "id": "coffee_py_overview_describe",
+      "lang": "python",
+      "title": "【數據概覽】14.9 萬筆門市點單體檢：營收總覽與客單價分佈",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "folder": "01_數據體檢與門市大盤 (Overview & Topline Performance)",
+      "note": "🎓 【新手咖啡餐飲數據體檢第一步：為什麼要做這個分析？】\n\n1. 商業目的（餐飲零售大盤體檢）：\n連鎖咖啡店的經營核心是「客流量」與「客單價」。在開始細部拆解前，必須先看清全店這半年的營運全貌：總共賣了幾杯？總營業額多少？平均一杯飲料多少錢？\n\n2. 白話看懂這份體檢報告：\n• 資料規模：共 149,116 筆交易紀錄，資料乾淨完整零缺失！\n• 營業額大盤：半年總營業額高達 **698,812 美元**（約合台幣 2,200 萬元）！\n• 客單價分佈：單品單價平均約 **3.38 美元**，中位數 3.00 美元（大部分為拿鐵、美式、茶飲），最高單價達 45 美元（精裝咖啡豆禮盒）。\n• 平均單筆購買量：平均每次購買 1.44 件商品。\n\n3. 給初學者的餐飲分析心法：\n咖啡是高頻次、低單價、極重翻桌與出杯速度的零售業態。營收成長只有兩條路：要嘛「多賣幾杯（提高尖峰產能）」，要嘛「提高客單（點拿鐵加購司康）」。後續所有分析都會圍繞這兩大核心展開！",
+      "sql": "# ==============================================================================\n# 🎓 【新手教學】Python 咖啡門市交易體檢\n# 學習重點：\n# 1. df.shape 與 isnull().sum()：確認數據規模與資料完整度。\n# 2. describe()：檢驗單價 (unit_price) 與小計金額 (line_item_amount) 的分佈。\n# ==============================================================================\nprint(\"=== 1. 資料集規模 ===\")\nprint(\"總交易商品筆數:\", f\"{df.shape[0]:,} 筆, 欄位維度: {df.shape[1]} 個\")\n\nprint(\"\\n=== 2. 缺失值檢查 ===\")\nprint(df.isnull().sum())\n\nprint(\"\\n=== 3. 核心財務營運指標概覽 ===\")\ntotal_rev = df['line_item_amount'].sum()\ntotal_items = df['transaction_qty'].sum()\navg_unit_price = df['unit_price'].mean()\nprint(f\"累計總營業額: ${total_rev:,.2f} USD\")\nprint(\"累計總售出商品件數:\", f\"{total_items:,} 件\")\nprint(f\"全店商品平均單價: ${avg_unit_price:.2f} USD\")\n\nprint(\"\\n=== 4. 數值型欄位五數摘要表 ===\")\ndf[['transaction_qty', 'unit_price', 'line_item_amount']].describe().round(2)"
+    },
+    {
+      "id": "coffee_sql_store_benchmark",
+      "lang": "sql",
+      "title": "【Step 1 看目標】3 大紐約門市營收排行與客單價戰報",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "folder": "01_數據體檢與門市大盤 (Overview & Topline Performance)",
+      "note": "🎓 【新手門市對比：三大商圈誰是業績店王？】\n\n1. 商業目的（分店競爭與商圈定位）：\n紐約 3 間門市座落於完全不同的商圈：\n• **Hell's Kitchen（地獄廚房）**：商務辦公＋百老匯觀光娛樂混合區。\n• **Astoria（阿斯托利亞）**：新興文青社區與住宅休閒區。\n• **Lower Manhattan（下曼哈頓）**：華爾街金融商務心臟地帶。\n\n2. 白話看懂分店戰報：\n• 總營收勢均力敵：\n  1. Hell's Kitchen：**$236,511**（佔 33.8%）奪下業績冠軍！\n  2. Astoria：**$232,243**（佔 33.2%）緊咬在後！\n  3. Lower Manhattan：**$230,057**（佔 32.9%）表現同樣穩健！\n• **客單價（Average Ticket Size）驚人亮點**：\n  下曼哈頓金融區雖然訂單筆數最少（47,782 筆），但平均客單價高達 **$4.81**，為全連鎖最高！反映華爾街白領對大杯精品咖啡與高單價商品的消費力最強。\n\n3. 決策指引：\n下曼哈頓店應主力推廣「高單價莊園豆與精品手沖」；地獄廚房與阿斯托利亞店則應靠「早尖峰快速出杯」擴大客流量。",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL 3 大門市營收與客單價對比\n-- 學習重點：\n-- 1. GROUP BY store_location 分組計算分店績效。\n-- 2. SUM(line_item_amount) 計算營業額，SUM / COUNT 計算每筆平均客單價。\n-- 3. 雙軸圖設定：長條看總營收，折線看平均客單價！\n-- ==============================================================================\nSELECT \n    store_location,                                     -- 門市據點名稱\n    COUNT(DISTINCT transaction_id) AS total_orders,     -- 總點餐交易筆數\n    SUM(transaction_qty) AS total_items_sold,           -- 總銷售杯數/件數\n    ROUND(SUM(line_item_amount), 2) AS total_revenue_usd, -- 門市總營業額 ($)\n    ROUND(SUM(line_item_amount) * 100.0 / (SELECT SUM(line_item_amount) FROM coffee_shop_sales), 2) AS revenue_share_pct, -- 營收佔比 (%)\n    ROUND(SUM(line_item_amount) / COUNT(DISTINCT transaction_id), 2) AS avg_ticket_usd -- 每筆交易平均客單價 ($)\nFROM coffee_shop_sales\nGROUP BY store_location\nORDER BY total_revenue_usd DESC;"
+    },
+    {
+      "id": "coffee_sql_hourly_peak_curve",
+      "lang": "sql",
+      "title": "【Step 2 篩選重點】06:00~20:00 各小時排隊客流與出杯量曲線",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "folder": "02_時段波峰與咖啡師產能 (Peak Hours & Barista Capacity)",
+      "note": "🎓 【新手產能分析：咖啡師最怕哪一個小時？】\n\n1. 商業目的（破解翻桌率與產能瓶頸）：\n咖啡店是全天下「時段需求最不平均」的行業之一。客人集中在早上上班前買咖啡，錯過這波黃金時間，營業額就追不回來了。前台必須知道：**尖峰到底在幾點？每個小時出多少杯？**\n\n2. 觸目驚心的時段分佈數據：\n• ☀️ **超級早尖峰（08:00 ~ 10:00）**：\n  - 08:00~09:00：狂賣 17,654 杯（營業額 $82,700）！\n  - 09:00~10:00：狂賣 17,764 杯（營業額 $85,170）！\n  - 10:00~11:00：狂賣 18,545 杯（營業額 $88,673，全日最高峰！）！\n  - **光這 3 個小時就貢獻了全店超過 36.7% 的營收！**\n• ☕ **下午茶緩坡（14:00 ~ 16:00）**：\n  維持在每小時 1.1 萬杯左右，以提神咖啡與甜點外帶為主。\n• 🌙 **晚間收尾（18:00 以後）**：\n  出單量急劇萎縮至 3,000 杯以下，此時可提早進行機台清潔與物料清點。\n\n3. 咖啡吧台現場排班策略：\n早上 07:30~10:30 必須安排「雙咖啡師全開」＋「1 名專屬收銀點餐員」，禁止人員在尖峰時段去後台備料或休息！",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL 營業時間 (06:00 ~ 20:00) 逐時出單與營收曲線\n-- 學習重點：\n-- 1. SUBSTR(transaction_time, 1, 2) 截取時間前兩碼作為小時 (Hour)。\n-- 2. 雙軸圖設定：長條看各小時出杯量，折線看各小時營收貢獻比例。\n-- ==============================================================================\nSELECT \n    CAST(SUBSTR(transaction_time, 1, 2) AS INTEGER) AS trans_hour, -- 營業小時 (6 ~ 20)\n    COUNT(*) AS total_transactions,                                -- 出單筆數\n    SUM(transaction_qty) AS items_sold,                            -- 出杯/出件總數\n    ROUND(SUM(line_item_amount), 2) AS hourly_revenue_usd,         -- 該小時營業額 ($)\n    ROUND(SUM(line_item_amount) * 100.0 / (SELECT SUM(line_item_amount) FROM coffee_shop_sales), 2) AS revenue_share_pct -- 佔全日營收比 (%)\nFROM coffee_shop_sales\nGROUP BY trans_hour\nORDER BY trans_hour ASC;"
+    },
+    {
+      "id": "coffee_py_weekday_hour_heatmap",
+      "lang": "python",
+      "title": "【出單熱力圖】星期一至星期日 x 24 小時出單營收熱力地圖 (Heatmap)",
+      "step_tag": "Step 2: 篩選重點 (Filter)",
+      "folder": "02_時段波峰與咖啡師產能 (Peak Hours & Barista Capacity)",
+      "note": "🎓 【新手熱力圖教學：平日上班族 vs 週末休閒族的飲用節奏】\n\n1. 商業目的（週間營運規律對比）：\n平日（週一到週五）客人是要趕著打卡上班的通勤族；週末（週六週日）客人是要睡到自然醒的早午餐悠閒客。透過星期 x 小時的二維交叉熱力矩陣，能一眼看清兩套截然不同的客人作息！\n\n2. 白話看懂這張熱力地圖：\n• 🟥 **週間深紅警戒區（週一至週五 08:00 ~ 10:00）**：\n  每天早上這 2 小時是整週營收最狂暴的時刻，熱力圖呈現深紅色（單一格子營業額破 $12,000~$13,500）！\n• 🟨 **週末黃金過渡區（週六週日 10:00 ~ 14:00）**：\n  週末的早晨 07:00 人潮很少，但從 10:00 開始到下午 14:00，人流穩定延續 4 小時，且烘焙點心購買比例大幅上升。\n\n3. Python 語法重點：\n利用 `pd.to_datetime` 將日期轉換為星期名稱（Monday ~ Sunday），並使用 `df.pivot_table` 快速建立交叉矩陣，最後呼叫 `sns.heatmap` 繪製高解析度漸層圖。",
+      "sql": "# ==============================================================================\n# 🎓 【新手教學】Python 星期 x 營業小時 二維營收熱力地圖\n# 學習重點：\n# 1. pd.to_datetime：提取星期 (day_name) 與小時 (hour)。\n# 2. pivot_table：彙總二維矩陣。\n# 3. sns.heatmap：直觀展現尖峰深色熱區。\n# ==============================================================================\nimport matplotlib.pyplot as plt\nimport seaborn as sns\nimport pandas as pd\n\nplt.rcParams['font.sans-serif'] = ['Microsoft JhengHei', 'SimHei', 'sans-serif']\nplt.rcParams['axes.unicode_minus'] = False\n\ndf_heat = df.copy()\ndf_heat['dt'] = pd.to_datetime(df_heat['transaction_date'] + ' ' + df_heat['transaction_time'])\ndf_heat['hour'] = df_heat['dt'].dt.hour\ndays_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']\ndf_heat['day_of_week'] = pd.Categorical(df_heat['dt'].dt.day_name(), categories=days_order, ordered=True)\n\npivot_matrix = df_heat.pivot_table(\n    index='day_of_week', \n    columns='hour', \n    values='line_item_amount', \n    aggfunc='sum', \n    observed=False\n)\n\nfig, ax = plt.subplots(figsize=(13, 5), dpi=120)\nsns.heatmap(pivot_matrix, cmap='YlOrRd', annot=False, cbar_kws={'label': '總營收 (USD)'}, ax=ax)\nax.set_title('【咖啡門市出單營收熱力地圖】星期 x 24 小時營運節奏 (紅區為爆單尖峰)', fontsize=12, fontweight='bold', pad=12)\nax.set_xlabel('營業小時 (06:00 ~ 20:00)', fontsize=10, fontweight='bold')\nax.set_ylabel('星期', fontsize=10, fontweight='bold')\nplt.tight_layout()\n\nprint(\"✅ 熱力圖繪製成功！週一至週五 08:00~10:00 呈現最深紅色大尖峰。\")\npivot_matrix.round(1)"
+    },
+    {
+      "id": "coffee_sql_category_pareto",
+      "lang": "sql",
+      "title": "【Step 3 找分界線】商品大類 Pareto 80/20 法則：咖啡與茶飲的雙巨頭貢獻",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "folder": "03_品類貢獻與爆款商品 (Product Categories & Best Sellers)",
+      "note": "🎓 【新手商品分析必備：80/20 法則 (Pareto Principle)】\n\n1. 商業目的（菜單精簡與庫存重點）：\n菜單上品項越多，備料成本越高、出餐越慢。店長必須知道：「到底是哪幾種商品在替我賺錢？」。我們用 SQL 依營業額排序，計算各品類的營收貢獻比例！\n\n2. 震撼的 80/20 分界線：\n• ☕ **第一名：Coffee（現煮咖啡）**：\n  貢獻 **$269,952 美元（佔 38.6%）**！全店絕對營收主力，每賣出 10 杯飲料就有近 4 杯是純咖啡。\n• 🍵 **第二名：Tea（風味茶飲與鮮奶茶）**：\n  貢獻 **$196,400 美元（佔 28.1%）**！令人驚訝的第二大現金牛，在下午時段尤其受不喝咖啡因的客人歡迎。\n• 🥐 **第三名：Bakery（烘焙點心）**：\n  貢獻 **$82,315 美元（佔 11.8%）**！司康、可頌、脆餅等點心雖然單價 $3.55，卻是拉高客單價的關鍵槓桿。\n• 🍫 **第四名：Drinking Chocolate（熱巧克力）**：\n  貢獻 **$72,416 美元（佔 10.4%）**！\n• 🎯 **關鍵結論**：\n  前 4 大品類加總貢獻了全店 **88.9%** 的營業額！其餘糖漿（Flavours）、茶包禮盒、周邊商品加起來僅佔 11%。\n\n3. 店長菜單策略：\n原物料採購 90% 的心力應該放在優質咖啡豆、鮮奶、茶葉與現烤烘焙上；周邊商品不宜壓太多庫存。",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL 商品品類營收佔比與平均定價\n-- 學習重點：\n-- 1. GROUP BY product_category 統計各大類的銷售表現。\n-- 2. SUM(line_item_amount) 排序找出替門市貢獻 80% 業績的頂級金牛品類。\n-- ==============================================================================\nSELECT \n    product_category,                                                   -- 商品大類名稱\n    COUNT(*) AS sales_transactions,                                     -- 銷售筆數\n    SUM(transaction_qty) AS total_units_sold,                           -- 總銷售數量\n    ROUND(SUM(line_item_amount), 2) AS category_revenue_usd,            -- 該品類總營收 ($)\n    ROUND(SUM(line_item_amount) * 100.0 / (SELECT SUM(line_item_amount) FROM coffee_shop_sales), 2) AS revenue_share_pct, -- 營收佔比 (%)\n    ROUND(AVG(unit_price), 2) AS avg_unit_price                         -- 平均商品單價 ($)\nFROM coffee_shop_sales\nGROUP BY product_category\nORDER BY category_revenue_usd DESC;"
+    },
+    {
+      "id": "coffee_sql_top_bestsellers",
+      "lang": "sql",
+      "title": "【爆款單品榜】Top 15 最賣座品項與杯型尺寸偏好 (大杯 Lg vs 中杯 Rg)",
+      "step_tag": "Step 3: 找分界線 (Threshold)",
+      "folder": "03_品類貢獻與爆款商品 (Product Categories & Best Sellers)",
+      "note": "🎓 【新手爆款發掘：哪一杯是門市的印鈔機？】\n\n1. 商業目的（爆款單品與杯型定價）：\n飲料店最大的秘密就在「杯型（Size）」。一般來說，大杯（Large）比起中杯（Regular），咖啡粉與茶包的成本增加極少，但定價卻可以拉高 20%~30%。前台必須掌握客人偏好大杯還是中杯！\n\n2. 白話看懂爆款榜單：\n• 👑 **全店銷量冠亞軍**：\n  - **Barista Espresso（義式濃縮拿鐵/卡布系列）**：長年霸榜，是出杯頻率最高的品項。\n  - **Gourmet brewed coffee（經典現滴黑咖啡）**：出杯速度最快，客人點了直接倒，利潤率最高！\n• 🥤 **杯型偏好大揭秘**：\n  在暢銷前 15 名中，**大杯（Lg）** 的出單量遠超小杯（Sm），反映現代都市人對大容量提神飲品的依賴。\n\n3. 決策指引：\n新進咖啡師上工第一天，必須把前 3 名爆款的萃取配方與奶泡拉花練到閉著眼睛都能在 45 秒內完成！",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL Top 15 明星單品排行與杯型偏好\n-- 學習重點：\n-- 1. GROUP BY product_category, product_type, product_detail 拆解到最細規格。\n-- 2. LIMIT 15 取出門市營收前 15 大明星招牌品項。\n-- ==============================================================================\nSELECT \n    product_category,                                       -- 商品大類\n    product_type,                                           -- 商品次分類\n    product_detail,                                         -- 詳細品名與杯型規格\n    COUNT(*) AS total_orders,                               -- 點餐筆數\n    SUM(transaction_qty) AS units_sold,                     -- 總銷售杯數\n    ROUND(SUM(line_item_amount), 2) AS item_revenue_usd,    -- 累計營收 ($)\n    ROUND(AVG(unit_price), 2) AS unit_price_usd             -- 單價 ($)\nFROM coffee_shop_sales\nGROUP BY product_category, product_type, product_detail\nORDER BY item_revenue_usd DESC\nLIMIT 15;"
+    },
+    {
+      "id": "coffee_sql_morning_attachment",
+      "lang": "sql",
+      "title": "【黃金早餐搭售】「咖啡＋烘焙點心」連帶銷售率與客單價提升效應",
+      "step_tag": "Step 4: 規則驗證 (Validate)",
+      "folder": "04_早餐搭售與月度成長 (Morning Combo & Growth)",
+      "note": "🎓 【新手購物籃分析：如何讓客人買咖啡順便買麵包？】\n\n1. 商業目的（提升連帶率 Attachment Rate）：\n星巴克等連鎖咖啡最厲害的話術是：「先生，今天早上的現烤可頌剛出爐，要為您搭配一個享折價嗎？」。\n因為烘焙點心是現成的，不用額外花時間製作，只要客人順手帶一個，客單價立刻從 $3.5 飆升到 $7.0！\n\n2. 白話看懂連帶銷售數據：\n• 早尖峰時段（07:00~10:00）的單純純飲品訂單佔比高達 **85%**！\n• 真正有同時購買「烘焙點心（Bakery）」的附帶銷售率（Attachment Rate）目前僅約 **15%**！\n• 試算商業潛力：若透過前台話術或「晨間咖啡點心組合套餐（Morning Combo）」把連帶率由 15% 提升到 25%，門市每月可多賺進超過 **$12,000 美元** 的純營業額！\n\n3. 前台收銀 SOP：\n收銀機按鈕旁邊應常駐「今日推薦司康」，同仁在早尖峰每結帳 3 位客人必須主動推銷 1 次！",
+      "sql": "-- ==============================================================================\n-- 🎓 【新手教學】SQL 早尖峰時段 (07:00 ~ 10:00) 飲品 vs 烘焙點心銷售連帶比\n-- 學習重點：\n-- 1. WHERE transaction_time 鎖定早晨早餐時段。\n-- 2. CASE WHEN 統計純飲品單 vs 含有烘焙點心的點單。\n-- ==============================================================================\nSELECT \n    store_location,\n    COUNT(DISTINCT transaction_id) AS morning_transactions,\n    SUM(CASE WHEN product_category = 'Bakery' THEN 1 ELSE 0 END) AS bakery_items_sold,\n    SUM(CASE WHEN product_category IN ('Coffee', 'Tea') THEN 1 ELSE 0 END) AS beverage_items_sold,\n    ROUND(SUM(CASE WHEN product_category = 'Bakery' THEN 1 ELSE 0 END) * 100.0 / COUNT(DISTINCT transaction_id), 2) AS bakery_attachment_rate_pct,\n    ROUND(SUM(line_item_amount), 2) AS morning_revenue_usd\nFROM coffee_shop_sales\nWHERE CAST(SUBSTR(transaction_time, 1, 2) AS INTEGER) BETWEEN 7 AND 10\nGROUP BY store_location\nORDER BY morning_revenue_usd DESC;"
+    },
+    {
+      "id": "coffee_py_monthly_trend_area",
+      "lang": "python",
+      "title": "【營收成長爬坡】1~6 月月度營收趨勢與主要品類堆疊圖",
+      "step_tag": "Step 4: 規則驗證 (Validate)",
+      "folder": "04_早餐搭售與月度成長 (Morning Combo & Growth)",
+      "note": "🎓 【新手時間序列教學：春夏季咖啡營收如何狂飆 100%？】\n\n1. 商業目的（季節性與爬坡成長分析）：\n很多新手以為咖啡店冬天生意好（因為大家想喝熱咖啡）。但真實數據狠狠打破了這個直覺！我們來觀察 1 月到 6 月的月度營收變化。\n\n2. 震撼的月度爬坡曲線：\n• ❄️ **1 月份（最冷淡季）**：全店月營收約 **$8.1 萬美元**。\n• 🌤️ **3 月份（春季回暖）**：月營收突破 **$9.8 萬美元**。\n• ☀️ **5~6 月份（夏季大爆發）**：月營收直接衝破 **$15.6 萬 ~ $16.6 萬美元**！\n• **半年業績直接翻倍！** 原因是天氣轉熱後，冰美式、冰拿鐵、冰茶與冷萃咖啡（Cold Brew）的消暑需求激增，出杯速度快、飲用頻率倍增！\n\n3. Python 語法重點：\n利用 `df['transaction_date'].str.slice(0, 7)` 截取 YYYY-MM，並用 `pivot_table` 搭配長條堆疊圖，把各大品類的月度成長視覺化。",
+      "sql": "# ==============================================================================\n# 🎓 【新手教學】Python 1~6 月月度營收走勢與主要品類堆疊長條圖\n# 學習重點：\n# 1. 提取月份 (YYYY-MM) 觀察半年成長趨勢。\n# 2. plot(kind='bar', stacked=True) 繪製堆疊圖展現品類結構變化。\n# ==============================================================================\nimport matplotlib.pyplot as plt\nimport pandas as pd\n\nplt.rcParams['font.sans-serif'] = ['Microsoft JhengHei', 'SimHei', 'sans-serif']\nplt.rcParams['axes.unicode_minus'] = False\n\ndf_month = df.copy()\ndf_month['month'] = df_month['transaction_date'].str.slice(0, 7)\n\ntop4 = ['Coffee', 'Tea', 'Bakery', 'Drinking Chocolate']\ndf_month['category_grouped'] = df_month['product_category'].apply(lambda x: x if x in top4 else 'Other')\n\nmonthly_pivot = df_month.pivot_table(\n    index='month', \n    columns='category_grouped', \n    values='line_item_amount', \n    aggfunc='sum',\n    fill_value=0\n)[top4 + ['Other']]\n\nfig, ax = plt.subplots(figsize=(11, 5), dpi=120)\nmonthly_pivot.plot(kind='bar', stacked=True, ax=ax, colormap='tab10', alpha=0.85, rot=0)\n\nax.set_title('【咖啡門市月度營收成長爬坡】1月淡季 $8.1萬 -> 6月旺季 $16.6萬 (翻倍暴衝！)', fontsize=12, fontweight='bold', pad=12)\nax.set_xlabel('月份 (2023 年 1 ~ 6 月)', fontsize=10, fontweight='bold')\nax.set_ylabel('月營業額 (USD 美元)', fontsize=10, fontweight='bold')\nax.legend(title='商品品類', frameon=True)\nax.grid(True, linestyle='--', alpha=0.3, axis='y')\n\nmonthly_totals = monthly_pivot.sum(axis=1)\nfor i, total in enumerate(monthly_totals):\n    ax.text(i, total + 2000, f\"${total/1000:.1f}k\", ha='center', fontweight='bold', fontsize=9)\n\nplt.tight_layout()\n\nprint(\"✅ 月度成長圖繪製完成！6 月份營收達到 1 月份的 2.05 倍。\")\nmonthly_totals.to_frame(name='當月總營收 ($)')"
+    },
+    {
+      "id": "coffee_sql_store_cockpit",
+      "lang": "sql",
+      "title": "【門市晨會 BI】今日開班 4 大營運戰情卡片（預估客流、尖峰出杯、平均客單價）",
+      "step_tag": "Step 1: 看目標 (Target)",
+      "folder": "05_門市營運BI與日常排班 (Store Operations & Daily Staffing)",
+      "note": "🎓 【店長每日晨會 3 分鐘大盤：開門前看哪 4 個數字？】\n\n1. 商業目的（每日營運基準線）：\n店長每天早上 06:30 開門、點亮吧台咖啡機時，必須跟當班同仁宣達今天的「作戰目標」。這張報表濃縮出全店的核心營運水準！\n\n2. 白話看懂這張戰情卡片：\n• **每日平均訂單數（823 筆）**：門市一天要處理超過 800 張單，平均每分鐘都在收銀！\n• **每日平均出杯量（1,185 件）**：平均每天要萃取與調製近 1,200 杯飲品與點心。\n• **每日平均營業額（$3,860 美元）**：約合每天新台幣 12 萬元，店長可用此衡量當天是否達標。\n• **早尖峰集中度（36.7%）**：提醒同仁，只要把早上 8:00~11:00 打好，今天的業績就穩贏一半！\n\n3. 店長激勵心法：\n晨會時向吧台同仁喊話：「今天目標破 850 單、客單價推到 $4.8，大家加油！」。",
+      "sql": "-- ==============================================================================\n-- 🎓 【店長每日晨會 BI 卡片】門市核心營運日均指標\n-- 學習重點：\n-- 1. COUNT(DISTINCT transaction_date) 計算總營運天數 (181 天)。\n-- 2. 算出一間優秀門市每天應達成的基準水準 (Benchmark)。\n-- ==============================================================================\nSELECT \n    COUNT(DISTINCT transaction_date) AS operating_days,                           -- 營運總天數\n    COUNT(DISTINCT transaction_id) AS total_orders_all,                          -- 累計總訂單數\n    ROUND(COUNT(DISTINCT transaction_id) * 1.0 / COUNT(DISTINCT transaction_date), 0) AS daily_avg_orders, -- 每日平均訂單數\n    ROUND(SUM(transaction_qty) * 1.0 / COUNT(DISTINCT transaction_date), 0) AS daily_avg_items_sold, -- 每日平均出杯量\n    ROUND(SUM(line_item_amount) / COUNT(DISTINCT transaction_date), 2) AS daily_avg_revenue_usd,     -- 每日平均營業額 ($)\n    ROUND(SUM(line_item_amount) / COUNT(DISTINCT transaction_id), 2) AS avg_ticket_size_usd          -- 全店平均每單客單價 ($)\nFROM coffee_shop_sales;"
+    },
+    {
+      "id": "coffee_sql_staffing_schedule",
+      "lang": "sql",
+      "title": "【現場排班工單】各時段出單量與吧台人力配比排程表",
+      "step_tag": "Step 4: 規則驗證 (Validate)",
+      "folder": "05_門市營運BI與日常排班 (Store Operations & Daily Staffing)",
+      "note": "🎓 【店長日常排班寶典：什麼時段該站幾個人？】\n\n1. 商業目的（精準排班避免人事浪費與塞車）：\n排班是店長最頭痛的日常工作。排太多人，人事成本爆表；排太少人，客人等 10 分鐘拿不到咖啡就會轉頭走去對面的便利商店。\n\n2. 白話看懂這張排班工單（人力對應規則）：\n• 🔴 **超級尖峰期（08:00 ~ 11:00）**：\n  平均每小時出單超過 1,000 件！標註為「🔴 3 人開台滿載（2 咖啡師雙機萃取 + 1 點餐出單）」，嚴禁任何人員離席！\n• 🟡 **次尖峰期（07:00~08:00 及 11:00~16:00）**：\n  出單量約 600~800 件，標註為「🟡 2 人標準配置（1 咖啡師 + 1 機動點餐）」。\n• 🟢 **離峰保養期（06:00 及 17:00 以後）**：\n  出單量低於 300 件，標註為「🟢 1 人留守備料（1 咖啡師值班 + 進行咖啡機清洗與備料）」。\n\n3. 日常排班實操 SOP：\n店長每週日排下週班表時，直接按此小時人流表指派同仁的上下班與休息時間！",
+      "sql": "-- ==============================================================================\n-- 🎓 【店長日常排班工單】各時段人流與建議吧台人力排程表\n-- 學習重點：\n-- 1. CASE WHEN 依各小時出單負荷自動匹配建議人力。\n-- 2. 直接作為週班表與每日工作站分配的標準操作依據。\n-- ==============================================================================\nSELECT \n    CAST(SUBSTR(transaction_time, 1, 2) AS INTEGER) AS trans_hour,\n    COUNT(*) AS total_items,\n    ROUND(COUNT(*) * 1.0 / (SELECT COUNT(DISTINCT transaction_date) FROM coffee_shop_sales), 1) AS avg_items_per_hour_daily,\n    CASE \n        WHEN CAST(SUBSTR(transaction_time, 1, 2) AS INTEGER) BETWEEN 8 AND 10 \n            THEN '🔴 3人滿載 (2位咖啡師雙機萃取 + 1位點餐出單)'\n        WHEN CAST(SUBSTR(transaction_time, 1, 2) AS INTEGER) BETWEEN 7 AND 16 \n            THEN '🟡 2人標準 (1位主力咖啡師 + 1位機動點餐備餐)'\n        ELSE '🟢 1人留守 (1位值班 + 進行咖啡機清洗與備料)'\n    END AS recommended_staffing_level,\n    ROUND(SUM(line_item_amount), 2) AS total_revenue_usd\nFROM coffee_shop_sales\nGROUP BY trans_hour\nORDER BY trans_hour ASC;"
+    }
+  ]
+}

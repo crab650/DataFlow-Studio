@@ -16,3 +16,4 @@ source_fingerprints.json
 *.json.tmp
 *.zip
 kaggle_dump.html
+scratch/
