@@ -1,0 +1,132 @@
+{
+  "hotel_bookings": {
+    "hotel": {
+      "zh": "飯店類型",
+      "purpose": "區分 City Hotel (城市商務) 與 Resort Hotel (渡假休閒)"
+    },
+    "is_canceled": {
+      "zh": "主角變數(Y): 是否取消",
+      "purpose": "衡量預訂是否取消 (0=如期入住, 1=取消退房)"
+    },
+    "lead_time": {
+      "zh": "提前預訂天數",
+      "purpose": "從下單日到預計入住日之間的天數，核心預測特徵"
+    },
+    "arrival_date_year": {
+      "zh": "抵達年份",
+      "purpose": "追蹤 2015~2017 年度營運走勢"
+    },
+    "arrival_date_month": {
+      "zh": "抵達月份",
+      "purpose": "分析 1~12 月季節性與旅遊淡旺季"
+    },
+    "arrival_date_week_number": {
+      "zh": "抵達週次",
+      "purpose": "分析年內第 1~53 週訂房密集度"
+    },
+    "arrival_date_day_of_month": {
+      "zh": "抵達日期號數",
+      "purpose": "分析月份內各日入住房客波動"
+    },
+    "stays_in_weekend_nights": {
+      "zh": "週末住宿夜數",
+      "purpose": "統計週五與週六住宿天數"
+    },
+    "stays_in_week_nights": {
+      "zh": "平日住宿夜數",
+      "purpose": "統計週日到週四住宿天數"
+    },
+    "adults": {
+      "zh": "成人生客人數",
+      "purpose": "評估房客團體規模"
+    },
+    "children": {
+      "zh": "孩童人數",
+      "purpose": "分析家庭親子客群 (4~17歲)"
+    },
+    "babies": {
+      "zh": "嬰兒人數",
+      "purpose": "分析嬰兒隨行家庭客需求 (<4歲)"
+    },
+    "meal": {
+      "zh": "餐飲方案",
+      "purpose": "BB (純早餐), HB (半餐), FB (全餐), SC (無餐飲)"
+    },
+    "country": {
+      "zh": "旅客來源國",
+      "purpose": "分析國際旅客與境內本國旅客來源比例"
+    },
+    "market_segment": {
+      "zh": "市場細分通路",
+      "purpose": "Online TA (線上OTA), Direct (直訂), Corporate (企業約)"
+    },
+    "distribution_channel": {
+      "zh": "分銷管道",
+      "purpose": "評估各大渠道如 TA/TO、Direct、GDS 的依賴度"
+    },
+    "is_repeated_guest": {
+      "zh": "是否為回頭客",
+      "purpose": "識別熟客 (1) 與新客 (0) 的忠誠度與違約率"
+    },
+    "previous_cancellations": {
+      "zh": "歷史取消紀錄次數",
+      "purpose": "衡量房客過去是否有習慣性退訂的違約風險"
+    },
+    "previous_bookings_not_canceled": {
+      "zh": "歷史成功履約次數",
+      "purpose": "衡量房客信用良好度"
+    },
+    "reserved_room_type": {
+      "zh": "預訂房型代碼",
+      "purpose": "顧客最初預訂的房型 (A~L)"
+    },
+    "assigned_room_type": {
+      "zh": "實際分配房型代碼",
+      "purpose": "檢查現場是否排房超賣升等或房型不符"
+    },
+    "booking_changes": {
+      "zh": "訂單修改次數",
+      "purpose": "房客在入住前修改日期、人數或房型的次數"
+    },
+    "deposit_type": {
+      "zh": "訂金擔保類型",
+      "purpose": "No Deposit (免訂金), Non Refund (不可退款), Refundable (可退)"
+    },
+    "agent": {
+      "zh": "訂房代訂旅行社 ID",
+      "purpose": "分析各代銷旅行社的帶單品質與取消率"
+    },
+    "company": {
+      "zh": "簽約企業戶 ID",
+      "purpose": "分析企業差旅客戶的履約穩定性"
+    },
+    "days_in_waiting_list": {
+      "zh": "候補確認等待天數",
+      "purpose": "訂單在確認前等待的延遲天數"
+    },
+    "customer_type": {
+      "zh": "顧客類型",
+      "purpose": "Transient (散客), Contract (合約客), Group (團體客)"
+    },
+    "adr": {
+      "zh": "平均每日房價 (ADR)",
+      "purpose": "Average Daily Rate 每晚客房淨營收，核心營收指標"
+    },
+    "required_car_parking_spaces": {
+      "zh": "需求停車位數量",
+      "purpose": "自駕旅客特徵 (有車位需求者取消率極低)"
+    },
+    "total_of_special_requests": {
+      "zh": "特殊需求總次數",
+      "purpose": "如高樓層、雙床等需求 (需求越多代表入住意願越高)"
+    },
+    "reservation_status": {
+      "zh": "最終訂房狀態",
+      "purpose": "Check-Out (已退房), Canceled (已取消), No-Show (爽約未到)"
+    },
+    "reservation_status_date": {
+      "zh": "狀態最後變更日期",
+      "purpose": "記錄取消或退房的確切發生日期 (YYYY-MM-DD)"
+    }
+  }
+}

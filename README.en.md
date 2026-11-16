@@ -66,6 +66,7 @@ df.groupby('category')[['sales', 'profit']].sum().round(2)
 | 01 | Manufacturing Defects and Demo ERP | 3,240 `defects` records and three tables in total, including demo supplier and machine tables; explores defect rates, risk conditions, and model evaluation | 10 SQL and Python lessons; 32 column descriptions | Select `01_Manufacturing_Quality_ERP` → `defects`; [course guide](docs/manufacturing_defects_course.md) |
 | 02 | Global Superstore Sales | 51,290 `superstoreorders` rows; explores sales, profit, categories, geography, and discounts | 30 SQL and Python notes, including eight ST1 beginner lessons; 21 column descriptions | Select `02_Superstore_Sales` → `superstoreorders` |
 | 03 | Olist Brazilian E-Commerce | Eight core tables, including 99,441 orders; explores customers, items, payments, reviews, and repeat purchases | 12 focused SQL lessons (20 notes on the orders table in total); 47 column descriptions | Select `03_Olist_Brazilian_Ecommerce` → `olist_orders_dataset`; [course guide](docs/olist_sql_course.md) |
+| 04 | Hotel Booking Demand & Cancellations | 119,390 `hotel_bookings` rows; explores cancellation leakage, seasonal ADR pricing, 90-day lead time thresholds, front desk BI cockpit, and frontline daily operational run sheets | 19 beginner-friendly SQL and Python tutorial notes across 7 thematic folders (including Front Office BI and frontline daily operational sheets); 32 column descriptions | Select `04_Hotel_Booking_Analytics` → `hotel_bookings` |
 
 **How this table is maintained:** Add one numbered row when a new dataset analysis project is created. Platform features, individual files, lessons, and dictionaries belong to their dataset project and do not get separate rows. Update an existing row when more analysis is added to that project. The rule is also recorded in `AGENTS.md`.
 
@@ -103,6 +104,7 @@ python -m unittest discover -s tests -v
 - The original manufacturing CSV comes from the [Predicting Manufacturing Defects Dataset](https://www.kaggle.com/datasets/rabieelkharoua/predicting-manufacturing-defects-dataset). The `OrderID`, `SupplierID`, and `MachineID` fields and companion tables in this project are generated demo ERP data, not real records from the source dataset.
 - The 21-column Superstore version corresponds to [SuperStore Sales Analytics](https://www.kaggle.com/datasets/thuandao/superstore-sales-analytics).
 - The Olist data comes from the [Brazilian E-Commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce). The Kaggle API labels its license **CC BY-NC-SA 4.0**. See `datasets/03_Olist_Brazilian_Ecommerce/SOURCE.md` for provenance and import scope.
+- The Hotel Booking Demand dataset comes from [Hotel Booking Demand](https://www.kaggle.com/datasets/jessemostipak/hotel-booking-demand) (Antonio et al., 2019), licensed under **CC0: Public Domain**. See `datasets/04_Hotel_Booking_Analytics/SOURCE.md` for details.
 
 Each dataset folder has a `SOURCE.md` documenting its source and license. This repository does not declare an open source license for the application code; follow each dataset's license separately.
 
