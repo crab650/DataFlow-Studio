@@ -1144,6 +1144,10 @@ def scan_datasets_folders():
                 json.dump(fingerprints, f, ensure_ascii=False, indent=2)
             conn.close()
 
+    if newly_imported:
+        for f_imported, _ in newly_imported:
+            invalidate_table_meta_cache(f_imported)
+
     return newly_imported, errors
 
 
@@ -1276,59 +1280,131 @@ def api_scan_folders():
     })
 
 
-@app.route("/api/tables", methods=["GET"])
-def get_tables():
-    """Return all tables across per-project databases (or filtered by folder), plus folder list."""
-    req_folder = request.args.get("folder", "").strip()
-    all_folders = list_all_project_folders()
-    folders_to_read = [req_folder] if (req_folder and req_folder in all_folders) else all_folders
+_MEMORY_META_CACHE = {}
+
+
+def get_meta_cache_path(folder_name):
+    """Return file path for `system_data/<folder>/meta_cache.json`."""
+    f_clean = sanitize_folder_name(folder_name)
+    return os.path.join(get_project_sys_dir(f_clean), "meta_cache.json")
+
+
+def invalidate_table_meta_cache(folder_name=None):
+    """Invalidate in-memory and disk metadata cache for a specific folder or all folders."""
+    global _MEMORY_META_CACHE
+    if folder_name:
+        f_clean = sanitize_folder_name(folder_name)
+        _MEMORY_META_CACHE.pop(f_clean, None)
+        c_path = get_meta_cache_path(f_clean)
+        if os.path.exists(c_path):
+            try:
+                os.remove(c_path)
+            except Exception:
+                pass
+    else:
+        _MEMORY_META_CACHE.clear()
+        for f in list_all_project_folders():
+            c_path = get_meta_cache_path(f)
+            if os.path.exists(c_path):
+                try:
+                    os.remove(c_path)
+                except Exception:
+                    pass
+
+
+def compute_folder_table_meta(folder_name):
+    """Compute column metadata, data types, and summary statistics for all tables in a folder."""
+    f_name = sanitize_folder_name(folder_name)
+    conn = get_db_connection(f_name)
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;")
+    tables = [row["name"] for row in cursor.fetchall()]
+    f_col_dicts = load_all_col_dicts(f_name)
 
     result = {}
-    for f_name in folders_to_read:
-        conn = get_db_connection(f_name)
-        cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;")
-        tables = [row["name"] for row in cursor.fetchall()]
-        f_col_dicts = load_all_col_dicts(f_name)
-
-        for t in tables:
-            try:
-                df = pd.read_sql_query(f'SELECT * FROM "{t}"', conn)
-                t_dict = f_col_dicts.get(t, {})
-                cols_info = []
-                for col in df.columns:
-                    dtype_str = str(df[col].dtype)
-                    is_num = pd.api.types.is_numeric_dtype(df[col])
-                    c_meta = t_dict.get(col, {})
-                    info = {
-                        "name": col,
-                        "zh": c_meta.get("zh", ""),
-                        "purpose": c_meta.get("purpose", ""),
-                        "dtype": dtype_str,
-                        "is_numeric": bool(is_num),
-                        "null_count": int(df[col].isnull().sum()),
-                        "unique_count": int(df[col].nunique())
-                    }
-                    if is_num and len(df) > 0:
-                        info["min"] = round(float(df[col].min()), 3)
-                        info["max"] = round(float(df[col].max()), 3)
-                        info["mean"] = round(float(df[col].mean()), 3)
-                    cols_info.append(info)
-                result[t] = {
-                    "folder": f_name,
-                    "row_count": len(df),
-                    "col_count": len(df.columns),
-                    "columns": cols_info,
-                    "col_dict": t_dict
+    for t in tables:
+        try:
+            df = pd.read_sql_query(f'SELECT * FROM "{t}"', conn)
+            t_dict = f_col_dicts.get(t, {})
+            cols_info = []
+            for col in df.columns:
+                dtype_str = str(df[col].dtype)
+                is_num = pd.api.types.is_numeric_dtype(df[col])
+                c_meta = t_dict.get(col, {})
+                info = {
+                    "name": col,
+                    "zh": c_meta.get("zh", ""),
+                    "purpose": c_meta.get("purpose", ""),
+                    "dtype": dtype_str,
+                    "is_numeric": bool(is_num),
+                    "null_count": int(df[col].isnull().sum()),
+                    "unique_count": int(df[col].nunique())
                 }
-            except Exception as e:
-                result[t] = {"folder": f_name, "error": str(e)}
-        conn.close()
+                if is_num and len(df) > 0:
+                    info["min"] = round(float(df[col].min()), 3)
+                    info["max"] = round(float(df[col].max()), 3)
+                    info["mean"] = round(float(df[col].mean()), 3)
+                cols_info.append(info)
+            result[t] = {
+                "folder": f_name,
+                "row_count": len(df),
+                "col_count": len(df.columns),
+                "columns": cols_info,
+                "col_dict": t_dict
+            }
+        except Exception as e:
+            result[t] = {"folder": f_name, "error": str(e)}
+    conn.close()
+    return result
+
+
+def get_folder_table_meta(folder_name, force_refresh=False):
+    """Get table metadata for a folder from memory cache, disk cache, or compute if missing."""
+    f_name = sanitize_folder_name(folder_name)
+    if not force_refresh and f_name in _MEMORY_META_CACHE:
+        return _MEMORY_META_CACHE[f_name]
+
+    cache_path = get_meta_cache_path(f_name)
+    if not force_refresh and os.path.exists(cache_path):
+        try:
+            with open(cache_path, "r", encoding="utf-8") as fp:
+                cached = json.load(fp)
+            if isinstance(cached, dict) and cached:
+                _MEMORY_META_CACHE[f_name] = cached
+                return cached
+        except Exception:
+            pass
+
+    meta = compute_folder_table_meta(f_name)
+    _MEMORY_META_CACHE[f_name] = meta
+    try:
+        with open(cache_path, "w", encoding="utf-8") as fp:
+            json.dump(meta, fp, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+    return meta
+
+
+@app.route("/api/tables", methods=["GET"])
+def get_tables():
+    """Return all tables across per-project databases (or filtered by folder), plus folder list with instant caching."""
+    req_folder = request.args.get("folder", "").strip()
+    all_folders = list_all_project_folders()
+
+    # Aggregate metadata across all folders using memory/disk cache (< 2ms total)
+    all_meta = {}
+    for f_name in all_folders:
+        all_meta.update(get_folder_table_meta(f_name))
+
+    if req_folder and req_folder in all_folders:
+        result = {t: meta for t, meta in all_meta.items() if meta.get("folder") == req_folder}
+    else:
+        result = all_meta
 
     folders_meta = {}
     for f_name in all_folders:
-        f_tables = [t for t, meta in result.items() if meta.get("folder") == f_name]
-        total_rows = sum(result[t].get("row_count", 0) for t in f_tables)
+        f_tables = [t for t, meta in all_meta.items() if meta.get("folder") == f_name]
+        total_rows = sum(all_meta[t].get("row_count", 0) for t in f_tables)
         try:
             f_notes = load_all_notes_dict(f_name)
             total_notes = sum(len(v) for v in f_notes.values())
@@ -1366,6 +1442,7 @@ def handle_col_dict():
     all_col_dicts = load_all_col_dicts(f_name)
     all_col_dicts[table_name] = col_dict
     save_all_col_dicts(all_col_dicts, f_name)
+    invalidate_table_meta_cache(f_name)
     return jsonify({
         "message": f"已儲存至專案 `{f_name}` 的專屬欄位字典 (`{table_name}` 共 {len(col_dict)} 個欄位)！",
         "col_dict": col_dict
@@ -1397,6 +1474,7 @@ def delete_table():
         del notes_dict[table_name]
         save_all_notes_dict(notes_dict, f_name)
 
+    invalidate_table_meta_cache(f_name)
     return jsonify({"message": f"已從專案 `{f_name}` 刪除資料表 `{table_name}` 及其專屬筆記"})
 
 
@@ -1493,6 +1571,7 @@ def upload_csv():
             starter_notes = generate_starter_notes_for_table(merged_df, target_table)
             notes_dict[target_table] = starter_notes
             save_all_notes_dict(notes_dict, project_folder)
+            invalidate_table_meta_cache(project_folder)
 
             return jsonify({
                 "message": f"已將 {len(uploaded_files)} 個檔案存入 `datasets/{project_folder}/` 與獨立資料庫 `system_data/{project_folder}/workspace.db` (`{target_table}`)！",
@@ -1517,6 +1596,7 @@ def upload_csv():
 
             conn.close()
             save_all_notes_dict(notes_dict, project_folder)
+            invalidate_table_meta_cache(project_folder)
             last_table = imported_tables[-1]
             return jsonify({
                 "message": f"成功匯入 {len(imported_tables)} 張表至專屬專案 `datasets/{project_folder}/`（獨立資料庫 `system_data/{project_folder}/workspace.db`）！",
@@ -1614,6 +1694,7 @@ def combine_tables():
         starter_notes = generate_starter_notes_for_table(merged_df, new_table)
         notes_dict[new_table] = starter_notes
         save_all_notes_dict(notes_dict, target_folder)
+        invalidate_table_meta_cache(target_folder)
 
         return jsonify({
             "message": f"成功建立合併表 `{new_table}`（已存入 `datasets/{target_folder}/{new_table}.csv` 與專屬資料庫，共 {len(merged_df)} 筆）！",

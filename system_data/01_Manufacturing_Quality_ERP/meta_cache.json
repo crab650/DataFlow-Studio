@@ -1,0 +1,505 @@
+{
+  "defects": {
+    "folder": "01_Manufacturing_Quality_ERP",
+    "row_count": 3240,
+    "col_count": 20,
+    "columns": [
+      {
+        "name": "OrderID",
+        "zh": "工單批號",
+        "purpose": "唯一識別每筆生產工單紀錄",
+        "dtype": "object",
+        "is_numeric": false,
+        "null_count": 0,
+        "unique_count": 3240
+      },
+      {
+        "name": "SupplierID",
+        "zh": "供應商代碼",
+        "purpose": "關聯供應商主檔 (suppliers)",
+        "dtype": "object",
+        "is_numeric": false,
+        "null_count": 0,
+        "unique_count": 6
+      },
+      {
+        "name": "MachineID",
+        "zh": "機台編號",
+        "purpose": "關聯產線機台主檔 (machines)",
+        "dtype": "object",
+        "is_numeric": false,
+        "null_count": 0,
+        "unique_count": 8
+      },
+      {
+        "name": "ProductionVolume",
+        "zh": "每日生產量",
+        "purpose": "了解產量規模",
+        "dtype": "int64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 862,
+        "min": 100.0,
+        "max": 999.0,
+        "mean": 548.523
+      },
+      {
+        "name": "ProductionCost",
+        "zh": "生產總成本",
+        "purpose": "評估批次生產成本規模",
+        "dtype": "float64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 3240,
+        "min": 5000.175,
+        "max": 19993.366,
+        "mean": 12423.018
+      },
+      {
+        "name": "SupplierQuality",
+        "zh": "供應商品質評分",
+        "purpose": "分析來料品質",
+        "dtype": "float64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 3240,
+        "min": 80.005,
+        "max": 99.989,
+        "mean": 89.833
+      },
+      {
+        "name": "DeliveryDelay",
+        "zh": "交貨延遲天數",
+        "purpose": "評估供應鏈交期準時率",
+        "dtype": "int64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 6,
+        "min": 0.0,
+        "max": 5.0,
+        "mean": 2.559
+      },
+      {
+        "name": "DefectRate",
+        "zh": "每千件不良數",
+        "purpose": "衡量品質",
+        "dtype": "float64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 3240,
+        "min": 0.501,
+        "max": 4.999,
+        "mean": 2.749
+      },
+      {
+        "name": "QualityScore",
+        "zh": "品質評分",
+        "purpose": "比較品質表現",
+        "dtype": "float64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 3240,
+        "min": 60.01,
+        "max": 99.997,
+        "mean": 80.134
+      },
+      {
+        "name": "MaintenanceHours",
+        "zh": "每週維護時數",
+        "purpose": "分析維護與品質的關係",
+        "dtype": "int64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 24,
+        "min": 0.0,
+        "max": 23.0,
+        "mean": 11.477
+      },
+      {
+        "name": "DowntimePercentage",
+        "zh": "停機時間百分比",
+        "purpose": "了解設備停機情況",
+        "dtype": "float64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 3240,
+        "min": 0.002,
+        "max": 4.998,
+        "mean": 2.501
+      },
+      {
+        "name": "InventoryTurnover",
+        "zh": "庫存周轉率",
+        "purpose": "衡量庫存流動效率",
+        "dtype": "float64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 3240,
+        "min": 2.002,
+        "max": 9.999,
+        "mean": 6.02
+      },
+      {
+        "name": "StockoutRate",
+        "zh": "缺貨率",
+        "purpose": "衡量原物料斷料或缺貨風險",
+        "dtype": "float64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 3240,
+        "min": 0.0,
+        "max": 0.1,
+        "mean": 0.051
+      },
+      {
+        "name": "WorkerProductivity",
+        "zh": "人員生產力",
+        "purpose": "分析生產效率",
+        "dtype": "float64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 3240,
+        "min": 80.005,
+        "max": 99.997,
+        "mean": 90.04
+      },
+      {
+        "name": "SafetyIncidents",
+        "zh": "工安事故次數",
+        "purpose": "監控車間作業安全紀錄",
+        "dtype": "int64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 10,
+        "min": 0.0,
+        "max": 9.0,
+        "mean": 4.592
+      },
+      {
+        "name": "EnergyConsumption",
+        "zh": "能源消耗量",
+        "purpose": "監控生產批次總能耗",
+        "dtype": "float64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 3240,
+        "min": 1000.72,
+        "max": 4997.075,
+        "mean": 2988.494
+      },
+      {
+        "name": "EnergyEfficiency",
+        "zh": "能源使用效率",
+        "purpose": "衡量設備節能表現",
+        "dtype": "float64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 3240,
+        "min": 0.1,
+        "max": 0.499,
+        "mean": 0.3
+      },
+      {
+        "name": "AdditiveProcessTime",
+        "zh": "積層加工時間",
+        "purpose": "分析特殊製程耗時",
+        "dtype": "float64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 3240,
+        "min": 1.0,
+        "max": 10.0,
+        "mean": 5.472
+      },
+      {
+        "name": "AdditiveMaterialCost",
+        "zh": "積層材料成本",
+        "purpose": "分析特殊製程耗材成本",
+        "dtype": "float64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 3240,
+        "min": 100.211,
+        "max": 499.983,
+        "mean": 299.515
+      },
+      {
+        "name": "DefectStatus",
+        "zh": "高低不良狀態",
+        "purpose": "品質分類",
+        "dtype": "int64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 2,
+        "min": 0.0,
+        "max": 1.0,
+        "mean": 0.84
+      }
+    ],
+    "col_dict": {
+      "OrderID": {
+        "zh": "工單批號",
+        "purpose": "唯一識別每筆生產工單紀錄"
+      },
+      "SupplierID": {
+        "zh": "供應商代碼",
+        "purpose": "關聯供應商主檔 (suppliers)"
+      },
+      "MachineID": {
+        "zh": "機台編號",
+        "purpose": "關聯產線機台主檔 (machines)"
+      },
+      "ProductionVolume": {
+        "zh": "每日生產量",
+        "purpose": "了解產量規模"
+      },
+      "ProductionCost": {
+        "zh": "生產總成本",
+        "purpose": "評估批次生產成本規模"
+      },
+      "SupplierQuality": {
+        "zh": "供應商品質評分",
+        "purpose": "分析來料品質"
+      },
+      "DeliveryDelay": {
+        "zh": "交貨延遲天數",
+        "purpose": "評估供應鏈交期準時率"
+      },
+      "DefectRate": {
+        "zh": "每千件不良數",
+        "purpose": "衡量品質"
+      },
+      "QualityScore": {
+        "zh": "品質評分",
+        "purpose": "比較品質表現"
+      },
+      "MaintenanceHours": {
+        "zh": "每週維護時數",
+        "purpose": "分析維護與品質的關係"
+      },
+      "DowntimePercentage": {
+        "zh": "停機時間百分比",
+        "purpose": "了解設備停機情況"
+      },
+      "InventoryTurnover": {
+        "zh": "庫存周轉率",
+        "purpose": "衡量庫存流動效率"
+      },
+      "StockoutRate": {
+        "zh": "缺貨率",
+        "purpose": "衡量原物料斷料或缺貨風險"
+      },
+      "WorkerProductivity": {
+        "zh": "人員生產力",
+        "purpose": "分析生產效率"
+      },
+      "SafetyIncidents": {
+        "zh": "工安事故次數",
+        "purpose": "監控車間作業安全紀錄"
+      },
+      "EnergyConsumption": {
+        "zh": "能源消耗量",
+        "purpose": "監控生產批次總能耗"
+      },
+      "EnergyEfficiency": {
+        "zh": "能源使用效率",
+        "purpose": "衡量設備節能表現"
+      },
+      "AdditiveProcessTime": {
+        "zh": "積層加工時間",
+        "purpose": "分析特殊製程耗時"
+      },
+      "AdditiveMaterialCost": {
+        "zh": "積層材料成本",
+        "purpose": "分析特殊製程耗材成本"
+      },
+      "DefectStatus": {
+        "zh": "高低不良狀態",
+        "purpose": "品質分類"
+      }
+    }
+  },
+  "machines": {
+    "folder": "01_Manufacturing_Quality_ERP",
+    "row_count": 8,
+    "col_count": 6,
+    "columns": [
+      {
+        "name": "MachineID",
+        "zh": "機台編號",
+        "purpose": "與主表 defects 關聯的主鍵",
+        "dtype": "object",
+        "is_numeric": false,
+        "null_count": 0,
+        "unique_count": 8
+      },
+      {
+        "name": "MachineName",
+        "zh": "機台名稱",
+        "purpose": "識別生產線設備",
+        "dtype": "object",
+        "is_numeric": false,
+        "null_count": 0,
+        "unique_count": 8
+      },
+      {
+        "name": "PlantArea",
+        "zh": "所屬廠區",
+        "purpose": "比較一廠/二廠/三廠整體良率差異",
+        "dtype": "object",
+        "is_numeric": false,
+        "null_count": 0,
+        "unique_count": 3
+      },
+      {
+        "name": "MachineModel",
+        "zh": "設備機型",
+        "purpose": "分析不同世代機型的穩定度",
+        "dtype": "object",
+        "is_numeric": false,
+        "null_count": 0,
+        "unique_count": 6
+      },
+      {
+        "name": "InstallYear",
+        "zh": "啟用年份",
+        "purpose": "分析機齡老舊程度與維護時數關係",
+        "dtype": "int64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 7,
+        "min": 2016.0,
+        "max": 2024.0,
+        "mean": 2020.0
+      },
+      {
+        "name": "MaxCapacity",
+        "zh": "額定日產能上限",
+        "purpose": "對照實際每日生產量是否超載",
+        "dtype": "int64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 7,
+        "min": 680.0,
+        "max": 950.0,
+        "mean": 802.5
+      }
+    ],
+    "col_dict": {
+      "MachineID": {
+        "zh": "機台編號",
+        "purpose": "與主表 defects 關聯的主鍵"
+      },
+      "MachineName": {
+        "zh": "機台名稱",
+        "purpose": "識別生產線設備"
+      },
+      "PlantArea": {
+        "zh": "所屬廠區",
+        "purpose": "比較一廠/二廠/三廠整體良率差異"
+      },
+      "MachineModel": {
+        "zh": "設備機型",
+        "purpose": "分析不同世代機型的穩定度"
+      },
+      "InstallYear": {
+        "zh": "啟用年份",
+        "purpose": "分析機齡老舊程度與維護時數關係"
+      },
+      "MaxCapacity": {
+        "zh": "額定日產能上限",
+        "purpose": "對照實際每日生產量是否超載"
+      }
+    }
+  },
+  "suppliers": {
+    "folder": "01_Manufacturing_Quality_ERP",
+    "row_count": 6,
+    "col_count": 6,
+    "columns": [
+      {
+        "name": "SupplierID",
+        "zh": "供應商代碼",
+        "purpose": "與主表 defects 關聯的主鍵",
+        "dtype": "object",
+        "is_numeric": false,
+        "null_count": 0,
+        "unique_count": 6
+      },
+      {
+        "name": "SupplierName",
+        "zh": "供應商名稱",
+        "purpose": "識別原料供應廠商",
+        "dtype": "object",
+        "is_numeric": false,
+        "null_count": 0,
+        "unique_count": 6
+      },
+      {
+        "name": "MaterialCategory",
+        "zh": "供應原料類別",
+        "purpose": "分析不同原料種類對品質影響",
+        "dtype": "object",
+        "is_numeric": false,
+        "null_count": 0,
+        "unique_count": 6
+      },
+      {
+        "name": "Region",
+        "zh": "產地國別/地區",
+        "purpose": "比較各產地供應鏈表現",
+        "dtype": "object",
+        "is_numeric": false,
+        "null_count": 0,
+        "unique_count": 6
+      },
+      {
+        "name": "ContractTier",
+        "zh": "合約等級",
+        "purpose": "比較一級/二級/三級廠商來料表現",
+        "dtype": "object",
+        "is_numeric": false,
+        "null_count": 0,
+        "unique_count": 3
+      },
+      {
+        "name": "LeadTimeDays",
+        "zh": "標準交期天數",
+        "purpose": "評估供應商標準供貨週期",
+        "dtype": "int64",
+        "is_numeric": true,
+        "null_count": 0,
+        "unique_count": 6,
+        "min": 3.0,
+        "max": 9.0,
+        "mean": 5.667
+      }
+    ],
+    "col_dict": {
+      "SupplierID": {
+        "zh": "供應商代碼",
+        "purpose": "與主表 defects 關聯的主鍵"
+      },
+      "SupplierName": {
+        "zh": "供應商名稱",
+        "purpose": "識別原料供應廠商"
+      },
+      "MaterialCategory": {
+        "zh": "供應原料類別",
+        "purpose": "分析不同原料種類對品質影響"
+      },
+      "Region": {
+        "zh": "產地國別/地區",
+        "purpose": "比較各產地供應鏈表現"
+      },
+      "ContractTier": {
+        "zh": "合約等級",
+        "purpose": "比較一級/二級/三級廠商來料表現"
+      },
+      "LeadTimeDays": {
+        "zh": "標準交期天數",
+        "purpose": "評估供應商標準供貨週期"
+      }
+    }
+  }
+}

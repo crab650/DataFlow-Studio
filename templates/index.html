@@ -1359,15 +1359,8 @@
       return allT.filter((t) => (allTablesMeta[t] && allTablesMeta[t].folder) === currentFolder);
     }
 
-    // Load Tables, Project Folders & Column Dictionary
-    async function loadTablesMeta() {
-      const res = await fetch("/api/tables");
-      const data = await res.json();
-      allTablesMeta = data.tables || {};
-      allProjectFolders = data.folders || ["01_Manufacturing_Quality_ERP"];
-      allFoldersMeta = data.folders_meta || {};
-      renderProjectPortalCards();
-
+    // Sync Header Folder and Table selectors with current in-memory state
+    function syncFolderAndTableSelectors() {
       // Keep currentFolder if it's a valid folder, otherwise fall back to first folder
       if (allProjectFolders.length > 0 && !allProjectFolders.includes(currentFolder)) {
         currentFolder = allProjectFolders[0];
@@ -1389,43 +1382,65 @@
 
       // Populate Header Table Selector (filtered by currentFolder)
       const headerSelector = document.getElementById("headerTableSelector");
-      headerSelector.innerHTML = "";
-      const folderTables = getTablesInCurrentFolder();
-      if (folderTables.length > 0) {
-        if (!folderTables.includes(currentTable)) {
-          const preferredTable = currentFolder === "03_Olist_Brazilian_Ecommerce"
-            ? "olist_orders_dataset" : folderTables[0];
-          currentTable = folderTables.includes(preferredTable) ? preferredTable : folderTables[0];
-        }
-        folderTables.forEach((t) => {
+      if (headerSelector) {
+        headerSelector.innerHTML = "";
+        const folderTables = getTablesInCurrentFolder();
+        if (folderTables.length > 0) {
+          if (!folderTables.includes(currentTable)) {
+            const preferredTable = currentFolder === "03_Olist_Brazilian_Ecommerce"
+              ? "olist_orders_dataset" : folderTables[0];
+            currentTable = folderTables.includes(preferredTable) ? preferredTable : folderTables[0];
+          }
+          folderTables.forEach((t) => {
+            const opt = document.createElement("option");
+            opt.value = t;
+            opt.textContent = `${t} (${allTablesMeta[t]?.row_count || 0} 筆)`;
+            if (t === currentTable) opt.selected = true;
+            headerSelector.appendChild(opt);
+          });
+        } else {
+          currentTable = "";
           const opt = document.createElement("option");
-          opt.value = t;
-          opt.textContent = `${t} (${allTablesMeta[t].row_count} 筆)`;
-          if (t === currentTable) opt.selected = true;
+          opt.value = "";
+          opt.textContent = "⚠️ (尚無資料表，請點右上角匯入)";
+          opt.selected = true;
           headerSelector.appendChild(opt);
-        });
-      } else {
-        currentTable = "";
-        const opt = document.createElement("option");
-        opt.value = "";
-        opt.textContent = "⚠️ (尚無資料表，請點右上角匯入)";
-        opt.selected = true;
-        headerSelector.appendChild(opt);
+        }
       }
+    }
 
+    // Load Tables, Project Folders & Column Dictionary
+    async function loadTablesMeta() {
+      const res = await fetch("/api/tables");
+      const data = await res.json();
+      allTablesMeta = data.tables || {};
+      allProjectFolders = data.folders || ["01_Manufacturing_Quality_ERP"];
+      allFoldersMeta = data.folders_meta || {};
+      renderProjectPortalCards();
+      syncFolderAndTableSelectors();
       renderSchemaSidebar();
     }
 
     async function onFolderSwitch(newFolder) {
       currentFolder = newFolder;
       schemaSidebarFilter = "all";
-      await loadTablesMeta();
-      await onProjectSwitch(currentTable);
+
       const folderTables = getTablesInCurrentFolder();
+      const preset = PROJECT_PRESETS_META[currentFolder];
+      if (preset && preset.primaryTable && folderTables.includes(preset.primaryTable)) {
+        currentTable = preset.primaryTable;
+      } else if (folderTables.length > 0 && !folderTables.includes(currentTable)) {
+        currentTable = folderTables[0];
+      }
+
+      syncFolderAndTableSelectors();
+      renderSchemaSidebar();
+      await onProjectSwitch(currentTable);
+
       if (folderTables.length > 0) {
-        showStatus(`📁 已切換至專案資料夾「datasets/${currentFolder}/」（共 ${folderTables.length} 張資料表）`, false);
+        showStatus(`📁 已切換至專案「datasets/${currentFolder}/」（共 ${folderTables.length} 張資料表）`, false);
       } else {
-        showStatus(`📁 已切換至專案資料夾「datasets/${currentFolder}/」（目前尚無資料表，可點右上角「➕ 匯入數據」）`, false);
+        showStatus(`📁 已切換至專案「datasets/${currentFolder}/」（目前尚無資料表，可點右上角「➕ 匯入數據」）`, false);
       }
     }
 
