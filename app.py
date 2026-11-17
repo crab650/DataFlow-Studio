@@ -1325,9 +1325,26 @@ def get_tables():
                 result[t] = {"folder": f_name, "error": str(e)}
         conn.close()
 
+    folders_meta = {}
+    for f_name in all_folders:
+        f_tables = [t for t, meta in result.items() if meta.get("folder") == f_name]
+        total_rows = sum(result[t].get("row_count", 0) for t in f_tables)
+        try:
+            f_notes = load_all_notes_dict(f_name)
+            total_notes = sum(len(v) for v in f_notes.values())
+        except Exception:
+            total_notes = 0
+        folders_meta[f_name] = {
+            "tables": f_tables,
+            "total_rows": total_rows,
+            "total_tables": len(f_tables),
+            "total_notes": total_notes
+        }
+
     return jsonify({
         "tables": result,
-        "folders": all_folders
+        "folders": all_folders,
+        "folders_meta": folders_meta
     })
 
 
@@ -1878,6 +1895,8 @@ def handle_notes():
     if request.method == "GET":
         f_name = resolve_folder_for_table(table_name, folder_arg)
         notes_dict = load_all_notes_dict(f_name)
+        if request.args.get("all_tables") == "1":
+            return jsonify({"folder": f_name, "notes_dict": notes_dict})
         if table_name not in notes_dict:
             conn = get_db_connection(f_name)
             try:

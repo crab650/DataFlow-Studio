@@ -51,12 +51,89 @@
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
 
+  <!-- ================= 專案導覽大廳 (Project Portal Hub) ================= -->
+  <div id="projectPortalView" class="h-screen flex flex-col bg-slate-950 text-slate-100 overflow-y-auto">
+    <!-- Portal Header -->
+    <header class="bg-slate-900/95 backdrop-blur border-b border-slate-800 px-6 py-3.5 flex items-center justify-between shrink-0 sticky top-0 z-30 shadow-lg">
+      <div class="flex items-center space-x-3">
+        <div class="bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500 text-white font-extrabold px-3 py-1.5 rounded-lg text-sm tracking-wider shadow-lg shadow-indigo-500/20">
+          DataFlow Studio
+        </div>
+        <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-900/60 text-indigo-300 border border-indigo-700/50 flex items-center space-x-1">
+          <span>🏛️</span>
+          <span>專案導航大廳</span>
+        </span>
+      </div>
+      <div class="flex items-center space-x-3">
+        <button onclick="scanDatasetsFolders()" class="bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-slate-700 hover:border-amber-500/40 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1.5 transition">
+          <span>🔄</span>
+          <span>掃描 datasets/ 資料夾</span>
+        </button>
+        <button onclick="openUploadModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-lg shadow-indigo-600/30 flex items-center space-x-1.5 transition">
+          <span>➕</span>
+          <span>匯入新數據專案</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Portal Hero Banner -->
+    <div class="max-w-7xl mx-auto w-full px-6 pt-10 pb-6 shrink-0">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-800/80 pb-8">
+        <div>
+          <div class="inline-flex items-center space-x-2 text-indigo-400 text-xs font-extrabold uppercase tracking-widest mb-2.5">
+            <span class="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>
+            <span>SQL + Python 雙引擎互動分析平台</span>
+          </div>
+          <h1 class="text-3xl font-extrabold text-white tracking-tight sm:text-4xl">
+            商業數據專案清單
+          </h1>
+          <p class="text-slate-400 text-sm mt-2.5 max-w-2xl leading-relaxed">
+            遵循 <strong class="text-indigo-300">「Step 1 看目標 ➔ Step 2 篩重點 ➔ Step 3 找分界 ➔ Step 4 驗證建模」</strong> 分析 SOP。請從下方挑選專案，點擊即可直接進入完整分析工作台：
+          </p>
+        </div>
+
+        <!-- Global Stats KPI Pills -->
+        <div class="flex flex-wrap gap-3 shrink-0">
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-2.5 shadow-sm">
+            <div class="text-[11px] text-slate-400 font-semibold">分析專案數</div>
+            <div class="text-xl font-black text-indigo-400" id="portalStatsFolderCount">-- 個</div>
+          </div>
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-2.5 shadow-sm">
+            <div class="text-[11px] text-slate-400 font-semibold">總營運數據</div>
+            <div class="text-xl font-black text-emerald-400" id="portalStatsRowCount">-- 筆</div>
+          </div>
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-2.5 shadow-sm">
+            <div class="text-[11px] text-slate-400 font-semibold">資料表總數</div>
+            <div class="text-xl font-black text-amber-400" id="portalStatsTableCount">-- 張</div>
+          </div>
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-2.5 shadow-sm">
+            <div class="text-[11px] text-slate-400 font-semibold">實戰分析程式</div>
+            <div class="text-xl font-black text-purple-400" id="portalStatsNotesCount">-- 則</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Portal Projects Grid -->
+    <div class="max-w-7xl mx-auto w-full px-6 pb-20 flex-1">
+      <div id="projectCardsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Rendered by renderProjectPortalCards() -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 專案分析工作台 (Analysis Workspace) ================= -->
+  <div id="analysisWorkspaceView" class="h-screen flex flex-col overflow-hidden hidden">
   <!-- Top Header with Project (Dataset) Switcher -->
   <header class="bg-slate-900 text-white px-4 py-2 flex items-center justify-between shadow-md shrink-0">
     <div class="flex items-center space-x-3">
       <div class="bg-gradient-to-r from-indigo-500 to-emerald-500 text-white font-extrabold px-2.5 py-1 rounded text-xs tracking-wider">
         DataFlow Studio
       </div>
+      <button onclick="returnToProjectPortal()" class="bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white px-2.5 py-1 rounded-lg border border-indigo-500/40 text-xs font-bold flex items-center space-x-1.5 transition shadow-sm" title="返回專案導覽大廳選擇其他分析專案">
+        <span>🏠</span>
+        <span>專案大廳</span>
+      </button>
       <button onclick="toggleSidebarFlyout()" class="bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white px-2 py-1 rounded border border-slate-700 text-xs font-bold flex items-center space-x-1 transition shadow-sm" title="點擊彈出/收合側邊欄 (用完自動彈回)">
         <span>📂</span>
         <span>側邊欄</span>
@@ -171,7 +248,12 @@
       <div id="sidebarNotesPanel" class="flex-1 flex flex-col overflow-hidden">
         <div class="p-2 border-b border-slate-100 bg-slate-50 space-y-1.5 shrink-0">
           <div class="flex items-center justify-between px-0.5">
-            <span class="text-[11px] font-bold text-slate-600 truncate" id="sidebarProjectLabel">📂 專案: defects</span>
+            <div class="flex items-center space-x-1.5 truncate">
+              <span class="text-[11px] font-bold text-slate-600 truncate" id="sidebarProjectLabel">📂 表: defects</span>
+              <button id="notesScopeToggleBtn" onclick="toggleNotesScope()" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 hover:bg-indigo-100 text-slate-700 hover:text-indigo-800 border border-slate-300 transition shrink-0" title="切換顯示：僅目前表筆記 或 專案全表筆記">
+                📄 當前表
+              </button>
+            </div>
             <div class="flex space-x-1">
               <button onclick="promptCreateNewFolder()" class="text-[11px] bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded border border-amber-200" title="新建分類資料夾，可將程式拖曳放入">
                 📁 + 分類夾
@@ -427,6 +509,8 @@
       </div>
 
     </main>
+  </div>
+
   </div>
 
   <!-- ================= MODALS ================= -->
@@ -737,7 +821,11 @@
       })[ch]);
     }
     let allTablesMeta = {};
-    let currentTable = "superstoreorders";
+    let allProjectFolders = ["01_Manufacturing_Quality_ERP"];
+    let allFoldersMeta = {};
+    let currentFolder = "01_Manufacturing_Quality_ERP";
+    let currentTable = "defects";
+    let notesScope = "table"; // "table" or "folder"
     let schemaSidebarFilter = "all"; // 'all' or specific table name
     let colDictEditingTable = "defects"; // table currently selected in #colDictModal
     let currentZoomScale = 100;
@@ -933,18 +1021,235 @@
       });
 
       await loadTablesMeta();
-      await loadSavedNotesForCurrentTable();
 
-      if (savedNotes.length > 0) {
-        selectNoteById(savedNotes[0].id);
-      } else if (currentTable) {
-        cmEditor.setValue(`SELECT * FROM "${currentTable}" LIMIT 25;`);
-        runCurrentCode();
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlFolder = urlParams.get("folder");
+      const savedView = sessionStorage.getItem("dataflow_current_view");
+      const savedFolder = sessionStorage.getItem("dataflow_current_folder");
+
+      if (urlFolder && allProjectFolders.includes(urlFolder)) {
+        await openProjectFromPortal(urlFolder);
+      } else if (savedView === "workspace" && savedFolder && allProjectFolders.includes(savedFolder)) {
+        await openProjectFromPortal(savedFolder);
       } else {
-        setEditorLanguage("sql");
-        cmEditor.setValue(`-- 📁 專案資料夾「datasets/${currentFolder}/」目前尚未匯入任何資料表\n-- 💡 請點選右上角「➕ 匯入數據 (單檔/多檔)」上傳 CSV 或 Excel 檔案\n-- 或將檔案放入 datasets/${currentFolder}/ 後點擊上方「🔄 掃描」即可自動建表並生成分析！`);
+        returnToProjectPortal();
       }
     });
+
+
+    const PROJECT_PRESETS_META = {
+      "01_Manufacturing_Quality_ERP": {
+        title: "智慧製造品質與 ERP 多表關聯",
+        icon: "🏭",
+        category: "智慧製造 / 工業 ERP",
+        badgeClass: "bg-blue-900/60 text-blue-300 border-blue-700/60",
+        desc: "結合 3,240 筆生產工單、6 家供應商與 8 台產線機台主檔，多維度歸因產品瑕疵率、機台維護時數與來料品質。",
+        tags: ["3表關聯 JOIN", "機台稼動率", "供應商評級", "決策樹歸因", "混淆矩陣"],
+        primaryTable: "defects"
+      },
+      "02_Superstore_Sales": {
+        title: "Global Superstore 零售銷售與損益",
+        icon: "🛒",
+        category: "連鎖零售 / 獲利損益",
+        badgeClass: "bg-emerald-900/60 text-emerald-300 border-emerald-700/60",
+        desc: "探索 5.1 萬筆跨國零售交易，剖析品類損益、高折扣侵蝕利潤陷阱、全球區域毛利與高負利潤黑洞商品。",
+        tags: ["Pareto 80/20", "折扣虧損", "全表相關係數", "RFM探索", "雙軸圖表"],
+        primaryTable: "superstoreorders"
+      },
+      "03_Olist_Brazilian_Ecommerce": {
+        title: "Olist 巴西電商多表大數據實戰",
+        icon: "📦",
+        category: "跨境電商 / 8表生態系",
+        badgeClass: "bg-amber-900/60 text-amber-300 border-amber-700/60",
+        desc: "真實電商生態系 8 張核心表，剖析近 10 萬筆訂單生命週期、物流延誤預警、商品評價與顧客回購排行。",
+        tags: ["8表多表關聯", "物流延誤", "顧客回購", "評價評分", "視窗函數"],
+        primaryTable: "olist_orders_dataset"
+      },
+      "04_Hotel_Booking_Analytics": {
+        title: "飯店預訂需求與取消率 BI 戰情室",
+        icon: "🏨",
+        category: "觀光旅宿 / 前台營運",
+        badgeClass: "bg-purple-900/60 text-purple-300 border-purple-700/60",
+        desc: "11.9 萬筆歐洲飯店預訂，深度揭露 37% 取消率、90 天預訂生死線、訂金悖論、排房衝突與前台第一線日常工單。",
+        tags: ["取消率預警", "淡旺季ADR", "排房熱力圖", "早班催房工單", "大夜No-Show"],
+        primaryTable: "hotel_bookings"
+      },
+      "05_Coffee_Shop_Sales": {
+        title: "紐約連鎖咖啡店門市營運分析",
+        icon: "☕",
+        category: "餐飲零售 / 門市排班",
+        badgeClass: "bg-amber-900/60 text-amber-200 border-amber-700/60",
+        desc: "14.9 萬筆曼哈頓門市 POS 點單，破解早尖峰出杯瓶頸、咖啡師排班配置、早餐加購搭售率與品類金牛。",
+        tags: ["早尖峰產能", "咖啡師排班", "週出單熱力圖", "早餐搭售率", "品類Pareto"],
+        primaryTable: "coffee_shop_sales"
+      }
+    };
+
+    function getTablesInFolder(fName) {
+      return Object.keys(allTablesMeta).filter(t => (allTablesMeta[t]?.folder) === fName);
+    }
+
+    function renderProjectPortalCards() {
+      const grid = document.getElementById("projectCardsGrid");
+      if (!grid) return;
+      grid.innerHTML = "";
+
+      let totalGlobalRows = 0;
+      let totalGlobalTables = Object.keys(allTablesMeta).length;
+      let totalGlobalNotes = 0;
+
+      const fMeta = allFoldersMeta || {};
+
+      allProjectFolders.forEach((fName) => {
+        const meta = fMeta[fName] || {};
+        const tablesInThisFolder = meta.tables || getTablesInFolder(fName);
+        const rowCount = meta.total_rows || tablesInThisFolder.reduce((sum, t) => sum + (allTablesMeta[t]?.row_count || 0), 0);
+        const notesCount = meta.total_notes || 0;
+
+        totalGlobalRows += rowCount;
+        totalGlobalNotes += notesCount;
+
+        const preset = PROJECT_PRESETS_META[fName] || {
+          title: fName.replace(/^\d+_/, "").replace(/_/g, " "),
+          icon: "📁",
+          category: "自訂數據專案",
+          badgeClass: "bg-slate-800 text-slate-300 border-slate-700",
+          desc: `包含 ${tablesInThisFolder.length} 張資料表，共 ${rowCount.toLocaleString()} 筆數據紀錄。`,
+          tags: ["SQL 查詢", "Python 探索", "自訂分析"],
+          primaryTable: tablesInThisFolder[0] || ""
+        };
+
+        const card = document.createElement("div");
+        card.className = "group relative bg-slate-900/90 hover:bg-slate-900 border border-slate-800 hover:border-indigo-500/80 rounded-2xl p-6 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 flex flex-col justify-between cursor-pointer";
+        card.onclick = () => openProjectFromPortal(fName);
+
+        const tablesBadgesHtml = tablesInThisFolder.map(t => {
+          const rCnt = allTablesMeta[t]?.row_count;
+          const rCntStr = rCnt !== undefined ? `${rCnt.toLocaleString()}筆` : "";
+          const isPrimary = (preset.primaryTable === t);
+          return `<span class="inline-flex items-center text-[11px] px-2 py-0.5 rounded-md ${isPrimary ? 'bg-indigo-900/70 text-indigo-200 border border-indigo-700 font-bold' : 'bg-slate-800 text-slate-400 border border-slate-700/60'}">
+            <span>📄 ${t}</span>
+            ${rCntStr ? `<span class="ml-1 opacity-75">(${rCntStr})</span>` : ''}
+          </span>`;
+        }).join(" ");
+
+        const tagsHtml = (preset.tags || []).map(tag => 
+          `<span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-800/80 text-slate-400 border border-slate-700/50">${tag}</span>`
+        ).join(" ");
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center space-x-3">
+                <span class="text-3xl p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/50 group-hover:scale-110 transition-transform">${preset.icon}</span>
+                <div>
+                  <span class="inline-block text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border mb-1 ${preset.badgeClass}">
+                    ${preset.category}
+                  </span>
+                  <h3 class="text-base font-bold text-white group-hover:text-indigo-300 transition-colors">
+                    ${preset.title}
+                  </h3>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-4">
+              ${preset.desc}
+            </p>
+
+            <div class="grid grid-cols-3 gap-2 bg-slate-950/60 rounded-xl p-2.5 border border-slate-800/60 mb-4 text-center">
+              <div>
+                <div class="text-[10px] text-slate-400">資料表數</div>
+                <div class="text-sm font-extrabold text-white">${tablesInThisFolder.length} 張</div>
+              </div>
+              <div>
+                <div class="text-[10px] text-slate-400">總筆數</div>
+                <div class="text-sm font-extrabold text-emerald-400">${rowCount.toLocaleString()} 筆</div>
+              </div>
+              <div>
+                <div class="text-[10px] text-slate-400">實戰筆記</div>
+                <div class="text-sm font-extrabold text-amber-400">${notesCount} 則</div>
+              </div>
+            </div>
+
+            <div class="space-y-1.5 mb-4">
+              <div class="text-[11px] font-bold text-slate-400 flex items-center space-x-1">
+                <span>📑 資料表架構：</span>
+              </div>
+              <div class="flex flex-wrap gap-1.5">
+                ${tablesBadgesHtml}
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-800/80 mt-2">
+            <div class="flex items-center justify-between">
+              <div class="flex flex-wrap gap-1">
+                ${tagsHtml}
+              </div>
+              <button onclick="event.stopPropagation(); openProjectFromPortal('${fName}');" class="bg-indigo-600 group-hover:bg-indigo-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow-md shadow-indigo-600/30 flex items-center space-x-1 transition shrink-0 ml-2">
+                <span>進入分析</span>
+                <span>➔</span>
+              </button>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      // Update Global Stats pills
+      const countEl = document.getElementById("portalStatsFolderCount");
+      if (countEl) countEl.textContent = `${allProjectFolders.length} 個`;
+      const rowEl = document.getElementById("portalStatsRowCount");
+      if (rowEl) rowEl.textContent = `${totalGlobalRows.toLocaleString()} 筆`;
+      const tblEl = document.getElementById("portalStatsTableCount");
+      if (tblEl) tblEl.textContent = `${totalGlobalTables} 張`;
+      const notesEl = document.getElementById("portalStatsNotesCount");
+      if (notesEl) notesEl.textContent = `${totalGlobalNotes} 則`;
+    }
+
+    async function openProjectFromPortal(folderName) {
+      currentFolder = folderName;
+      sessionStorage.setItem("dataflow_current_view", "workspace");
+      sessionStorage.setItem("dataflow_current_folder", folderName);
+
+      document.getElementById("projectPortalView").classList.add("hidden");
+      document.getElementById("analysisWorkspaceView").classList.remove("hidden");
+
+      // Auto-pick the primary table for this project
+      const preset = PROJECT_PRESETS_META[folderName];
+      const folderTables = getTablesInFolder(folderName);
+      if (preset && preset.primaryTable && folderTables.includes(preset.primaryTable)) {
+        currentTable = preset.primaryTable;
+      } else if (folderTables.length > 0) {
+        currentTable = folderTables[0];
+      }
+
+      await onFolderSwitch(folderName);
+
+      setTimeout(() => {
+        if (cmEditor) cmEditor.refresh();
+      }, 120);
+    }
+
+    function returnToProjectPortal() {
+      sessionStorage.setItem("dataflow_current_view", "portal");
+      document.getElementById("analysisWorkspaceView").classList.add("hidden");
+      document.getElementById("projectPortalView").classList.remove("hidden");
+      renderProjectPortalCards();
+    }
+
+    async function toggleNotesScope() {
+      notesScope = (notesScope === "table" ? "folder" : "table");
+      const btn = document.getElementById("notesScopeToggleBtn");
+      if (btn) {
+        btn.textContent = (notesScope === "table" ? "📄 當前表" : "📚 專案全表");
+        btn.className = (notesScope === "table" 
+          ? "text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 hover:bg-indigo-100 text-slate-700 hover:text-indigo-800 border border-slate-300 transition shrink-0"
+          : "text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-600 text-white border border-indigo-700 shadow-sm transition shrink-0");
+      }
+      await loadSavedNotesForCurrentTable();
+    }
 
     function setEditorLanguage(lang) {
       currentEditorLang = lang === "python" ? "python" : "sql";
@@ -1046,8 +1351,7 @@
       }
     }
 
-    let currentFolder = "02_Superstore_Sales";
-    let allProjectFolders = [];
+
 
     function getTablesInCurrentFolder() {
       const allT = Object.keys(allTablesMeta);
@@ -1061,6 +1365,8 @@
       const data = await res.json();
       allTablesMeta = data.tables || {};
       allProjectFolders = data.folders || ["01_Manufacturing_Quality_ERP"];
+      allFoldersMeta = data.folders_meta || {};
+      renderProjectPortalCards();
 
       // Keep currentFolder if it's a valid folder, otherwise fall back to first folder
       if (allProjectFolders.length > 0 && !allProjectFolders.includes(currentFolder)) {
@@ -1640,15 +1946,28 @@
 
     // Load & Render Saved Notes for Current Project Table
     async function loadSavedNotesForCurrentTable() {
-      if (!currentTable) {
+      if (!currentTable && notesScope === "table") {
         savedNotes = [];
         customFolders = [];
         renderNotesList();
         return;
       }
-      const res = await fetch(`/api/notes?table=${encodeURIComponent(currentTable)}&folder=${encodeURIComponent(currentFolder)}`);
-      const data = await res.json();
-      savedNotes = data.notes || [];
+
+      if (notesScope === "folder") {
+        const res = await fetch(`/api/notes?folder=${encodeURIComponent(currentFolder)}&all_tables=1`);
+        const data = await res.json();
+        const dict = data.notes_dict || {};
+        savedNotes = [];
+        Object.keys(dict).forEach(tName => {
+          (dict[tName] || []).forEach(n => {
+            savedNotes.push({ ...n, _fromTable: tName });
+          });
+        });
+      } else {
+        const res = await fetch(`/api/notes?table=${encodeURIComponent(currentTable)}&folder=${encodeURIComponent(currentFolder)}`);
+        const data = await res.json();
+        savedNotes = (data.notes || []).map(n => ({ ...n, _fromTable: currentTable }));
+      }
 
       // 嚴格依專案資料表完全隔離自訂資料夾
       const projectKey = `${currentFolder}::${currentTable}`;
@@ -1858,6 +2177,13 @@
     function selectNoteById(noteId, fromClick = false) {
       const found = savedNotes.find((n) => n.id === noteId);
       if (!found) return;
+
+      if (found._fromTable && found._fromTable !== currentTable) {
+        currentTable = found._fromTable;
+        const tblSel = document.getElementById("headerTableSelector");
+        if (tblSel) tblSel.value = currentTable;
+        renderSchemaSidebar();
+      }
       currentNoteId = found.id;
       const lang = found.lang || "sql";
       setEditorLanguage(lang);

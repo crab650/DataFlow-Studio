@@ -63,7 +63,7 @@ df.groupby('category')[['sales', 'profit']].sum().round(2)
 
 | 編號 | 分析專案 | 資料與分析內容 | 已完成的學習內容 | 入口／詳細說明 |
 |---|---|---|---|---|
-| 01 | 製造缺陷與示範 ERP | `defects` 3,240 筆，搭配供應商、機台共 3 張表；分析缺陷比例、風險條件與模型表現 | 10 則 SQL／Python 課程、32 個欄位解說 | 選 `01_Manufacturing_Quality_ERP` → `defects`；[課程說明](docs/manufacturing_defects_course.md) |
+| 01 | 製造缺陷與示範 ERP | `defects` 3,240 筆，搭配供應商、機台共 3 張表；分析缺陷比例、風險條件與模型表現 | 17 則 SQL／Python 課程與主檔分析（包含機台產能與供應商品質對比）、32 個欄位解說 | 選 `01_Manufacturing_Quality_ERP` → `defects`；[課程說明](docs/manufacturing_defects_course.md) |
 | 02 | Global Superstore 零售分析 | `superstoreorders` 51,290 筆；分析銷售、利潤、品類、地區與折扣 | 30 則 SQL／Python 筆記（含 8 則 ST1 入門練習）、21 個欄位解說 | 選 `02_Superstore_Sales` → `superstoreorders` |
 | 03 | Olist 巴西電商多表分析 | 8 張核心表，訂單表 99,441 筆；分析訂單、顧客、商品、付款、評價與回購 | 12 則專題 SQL 課程（訂單表共 20 則筆記）、47 個欄位解說 | 選 `03_Olist_Brazilian_Ecommerce` → `olist_orders_dataset`；[課程說明](docs/olist_sql_course.md) |
 | 04 | 飯店預訂需求與取消率分析 | `hotel_bookings` 119,390 筆；分析取消率流失、淡旺季定價 ADR、90天預訂門檻、前台 BI 戰情室與第一線日常作業工單 | 19 則新手教學 SQL／Python 筆記（橫跨 7 大分析主題）、32 個欄位解說 | 選 `04_Hotel_Booking_Analytics` → `hotel_bookings` |
