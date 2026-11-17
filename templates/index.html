@@ -124,68 +124,105 @@
 
   <!-- ================= 專案分析工作台 (Analysis Workspace) ================= -->
   <div id="analysisWorkspaceView" class="h-screen flex flex-col overflow-hidden hidden">
-  <!-- Top Header with Project (Dataset) Switcher -->
-  <header class="bg-slate-900 text-white px-4 py-2 flex items-center justify-between shadow-md shrink-0">
-    <div class="flex items-center space-x-3">
-      <div class="bg-gradient-to-r from-indigo-500 to-emerald-500 text-white font-extrabold px-2.5 py-1 rounded text-xs tracking-wider">
-        DataFlow Studio
+  <!-- Top Header with Modern Breadcrumb, Focused Target, and Streamlined Actions -->
+  <header class="bg-slate-900 border-b border-slate-800 text-white px-3.5 py-1.5 flex items-center justify-between shadow-sm shrink-0">
+    <!-- Left Section: Branding & Breadcrumb Navigation -->
+    <div class="flex items-center space-x-2 shrink-0">
+      <div class="bg-gradient-to-r from-indigo-500 to-emerald-500 text-white font-black px-2 py-0.5 rounded text-[11px] tracking-wider shrink-0 select-none shadow-sm">
+        DataFlow
       </div>
-      <button onclick="returnToProjectPortal()" class="bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white px-2.5 py-1 rounded-lg border border-indigo-500/40 text-xs font-bold flex items-center space-x-1.5 transition shadow-sm" title="返回專案導覽大廳選擇其他分析專案">
-        <span>🏠</span>
-        <span>專案大廳</span>
-      </button>
-      <button onclick="toggleSidebarFlyout()" class="bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white px-2 py-1 rounded border border-slate-700 text-xs font-bold flex items-center space-x-1 transition shadow-sm" title="點擊彈出/收合側邊欄 (用完自動彈回)">
-        <span>📂</span>
-        <span>側邊欄</span>
-      </button>
-      <h1 class="text-sm font-bold tracking-wide hidden xl:block text-slate-200">SQL + Python 數據分析工作台</h1>
 
-      <!-- Top-level Folder -> Table -> Target Switcher -->
-      <div class="flex items-center bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 space-x-2">
-        <span class="text-xs text-amber-300 font-bold">📁 專案資料夾：</span>
-        <select id="headerFolderSelector" onchange="onFolderSwitch(this.value)" class="bg-slate-900 text-amber-200 text-xs font-bold px-2 py-1 rounded border border-slate-600 focus:outline-none focus:border-amber-400"></select>
-        <button onclick="scanDatasetsFolders()" class="bg-slate-700 hover:bg-amber-600 text-slate-200 hover:text-white text-[11px] font-semibold px-1.5 py-0.5 rounded transition" title="當您在 datasets/ 資料夾下放入新資料夾與 CSV 時，點此一鍵掃描載入">
-          🔄 掃描
+      <nav class="flex items-center space-x-1.5 text-xs">
+        <button onclick="returnToProjectPortal()" class="text-slate-400 hover:text-white hover:bg-slate-800 px-2 py-1 rounded-md transition flex items-center space-x-1 font-semibold" title="返回專案導覽大廳">
+          <span>🏠</span>
+          <span>大廳</span>
         </button>
 
-        <span class="text-slate-600">|</span>
+        <span class="text-slate-600 font-mono">/</span>
 
-        <span class="text-xs text-indigo-300 font-bold">📄 資料表：</span>
-        <select id="headerTableSelector" onchange="onProjectSwitch(this.value)" class="bg-slate-900 text-white text-xs font-bold px-2 py-1 rounded border border-slate-600 focus:outline-none focus:border-indigo-400"></select>
+        <!-- Project Folder Dropdown (Breadcrumb Step 1) -->
+        <div class="relative flex items-center">
+          <span class="text-amber-400 mr-1 text-[11px]">📁</span>
+          <select id="headerFolderSelector" onchange="onFolderSwitch(this.value)" class="bg-slate-800 hover:bg-slate-750 text-amber-200 text-xs font-bold pl-1.5 pr-5 py-1 rounded-md border border-slate-700 hover:border-amber-500/50 focus:outline-none focus:border-amber-400 cursor-pointer transition appearance-none" title="切換分析專案"></select>
+          <span class="absolute right-1.5 pointer-events-none text-[8px] text-amber-400/70">▼</span>
+        </div>
 
-        <span class="text-slate-600">|</span>
+        <span class="text-slate-600 font-mono">/</span>
 
-        <span class="text-xs text-rose-300 font-bold">🎯 主角(Y)：</span>
-        <select id="targetColSelector" onchange="onTargetColChange()" class="bg-slate-900 text-rose-200 text-xs font-bold px-2 py-1 rounded border border-slate-600 focus:outline-none focus:border-rose-400 max-w-[145px]"></select>
+        <!-- Table Dropdown (Breadcrumb Step 2) -->
+        <div class="relative flex items-center">
+          <span class="text-indigo-400 mr-1 text-[11px]">📄</span>
+          <select id="headerTableSelector" onchange="onProjectSwitch(this.value)" class="bg-slate-800 hover:bg-slate-750 text-white text-xs font-bold pl-1.5 pr-5 py-1 rounded-md border border-slate-700 hover:border-indigo-500/50 focus:outline-none focus:border-indigo-400 cursor-pointer transition appearance-none" title="切換當前資料表 (看欄位結構與中英字典)"></select>
+          <span class="absolute right-1.5 pointer-events-none text-[8px] text-slate-400">▼</span>
+        </div>
 
-        <button onclick="regenerateProjectTemplates()" class="bg-slate-700 hover:bg-indigo-600 text-slate-200 hover:text-white text-[11px] font-semibold px-2 py-0.5 rounded transition" title="根據目前選擇的主角欄位(Y)，重新為此數據生成一套專屬 SQL + Python 程式碼">
-          🪄 依主角重產程式
-        </button>
-
-        <button id="deleteProjectBtn" onclick="deleteCurrentProject()" class="hidden text-rose-400 hover:bg-rose-900/50 text-[11px] px-1.5 py-0.5 rounded" title="刪除此專案資料表">
+        <button id="deleteProjectBtn" onclick="deleteCurrentProject()" class="hidden text-rose-400 hover:bg-rose-900/40 p-1 rounded transition text-xs" title="刪除此資料表">
           🗑️
         </button>
-      </div>
+      </nav>
     </div>
 
-    <div class="flex items-center space-x-2">
-      <button onclick="openUploadModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow flex items-center space-x-1 transition" title="支援一次選取單個或多個 CSV / Excel 檔案匯入">
-        <span>➕ 匯入數據 (單檔/多檔)</span>
+    <!-- Center Section: Focused Target (Y) Pill -->
+    <div class="flex items-center space-x-1.5 bg-slate-950/70 border border-slate-800 rounded-lg px-2.5 py-0.5 shrink-0">
+      <span class="text-xs text-rose-400 font-bold flex items-center space-x-1">
+        <span>🎯</span>
+        <span class="hidden sm:inline">主角(Y)：</span>
+      </span>
+      <select id="targetColSelector" onchange="onTargetColChange()" class="bg-slate-900 text-rose-200 text-xs font-semibold px-2 py-0.5 rounded border border-slate-700 focus:outline-none focus:border-rose-400 max-w-[145px]" title="設定主要分析的目標變數 Y"></select>
+
+      <button onclick="regenerateProjectTemplates()" class="text-slate-400 hover:text-indigo-300 hover:bg-slate-800 text-[11px] font-semibold px-1.5 py-0.5 rounded transition flex items-center space-x-0.5" title="根據目前選擇的主角欄位(Y)，重新產生一套 4 步範本程式">
+        <span>🪄</span>
+        <span>重產</span>
       </button>
-      <button onclick="openJoinModal()" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow flex items-center space-x-1 transition" title="將多張表左右關聯 (JOIN / merge) 或上下疊加 (UNION / concat)">
-        <span>🔗 多表關聯/合併</span>
+    </div>
+
+    <!-- Right Section: Actions & Dropdown Toolbox -->
+    <div class="flex items-center space-x-2 shrink-0">
+      <button onclick="openUploadModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-2.5 py-1 rounded-md shadow-sm flex items-center space-x-1 transition" title="支援一次選取單個或多個 CSV / Excel 檔案匯入">
+        <span>➕</span>
+        <span>匯入數據</span>
       </button>
-      <button onclick="openColDictModal()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow flex items-center space-x-1 transition" title="設定或貼上欄位的中英對照與分析用途">
-        <span>🌐 中英欄位字典</span>
+      <button onclick="openJoinModal()" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-2.5 py-1 rounded-md shadow-sm flex items-center space-x-1 transition" title="多表關聯 (JOIN) 或上下合併 (UNION)">
+        <span>🔗</span>
+        <span>多表關聯</span>
       </button>
-      <button onclick="openHealthCheckModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow flex items-center space-x-1 transition">
-        <span>🏥 一鍵全表體檢</span>
-      </button>
-      <button onclick="openGuideModal()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow transition">
-        <span>📖 4步心法</span>
-      </button>
-      <button onclick="exportReportMarkdown()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-600 transition">
-        <span>📥 匯出報告</span>
+
+      <!-- Toolbox Dropdown -->
+      <div class="relative" id="headerToolsDropdownContainer">
+        <button onclick="toggleHeaderToolsDropdown(event)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 text-xs font-semibold px-2 py-1 rounded-md flex items-center space-x-1 transition cursor-pointer select-none" title="更多分析與管理工具">
+          <span>🛠️</span>
+          <span>工具箱</span>
+          <span class="text-[8px] text-slate-400 ml-0.5">▼</span>
+        </button>
+        <div id="headerToolsMenu" class="hidden absolute right-0 mt-1.5 w-48 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-1 z-50 text-xs divide-y divide-slate-800">
+          <div class="py-1">
+            <button onclick="openHealthCheckModal(); closeHeaderToolsDropdown();" class="w-full px-3 py-1.5 text-left text-slate-200 hover:bg-indigo-600 hover:text-white flex items-center space-x-2 transition">
+              <span>🏥</span>
+              <span>一鍵全表體檢</span>
+            </button>
+            <button onclick="openColDictModal(); closeHeaderToolsDropdown();" class="w-full px-3 py-1.5 text-left text-slate-200 hover:bg-indigo-600 hover:text-white flex items-center space-x-2 transition">
+              <span>🌐</span>
+              <span>中英欄位字典</span>
+            </button>
+          </div>
+          <div class="py-1">
+            <button onclick="scanDatasetsFolders(); closeHeaderToolsDropdown();" class="w-full px-3 py-1.5 text-left text-slate-200 hover:bg-indigo-600 hover:text-white flex items-center space-x-2 transition">
+              <span>🔄</span>
+              <span>掃描 datasets 資料夾</span>
+            </button>
+            <button onclick="exportReportMarkdown(); closeHeaderToolsDropdown();" class="w-full px-3 py-1.5 text-left text-slate-200 hover:bg-indigo-600 hover:text-white flex items-center space-x-2 transition">
+              <span>📥</span>
+              <span>匯出 Markdown 報告</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <span class="text-slate-700">|</span>
+
+      <button onclick="openGuideModal()" class="text-amber-300 hover:text-amber-200 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-600/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center space-x-1" title="查看 4 步思考 SOP 與圖表選擇指南">
+        <span>📖</span>
+        <span>4步心法</span>
       </button>
     </div>
   </header>
@@ -3247,6 +3284,25 @@
       link.download = `${currentTable}_分析筆記報告_${new Date().toISOString().slice(0, 10)}.md`;
       link.click();
     }
+
+    // Top Header Tools Dropdown Control
+    function toggleHeaderToolsDropdown(e) {
+      if (e) e.stopPropagation();
+      const menu = document.getElementById("headerToolsMenu");
+      if (menu) menu.classList.toggle("hidden");
+    }
+
+    function closeHeaderToolsDropdown() {
+      const menu = document.getElementById("headerToolsMenu");
+      if (menu) menu.classList.add("hidden");
+    }
+
+    document.addEventListener("click", (e) => {
+      const container = document.getElementById("headerToolsDropdownContainer");
+      if (container && !container.contains(e.target)) {
+        closeHeaderToolsDropdown();
+      }
+    });
   </script>
 </body>
 </html>
