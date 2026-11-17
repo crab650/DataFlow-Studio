@@ -218,6 +218,11 @@
         </div>
       </div>
 
+      <button onclick="openWizardModal()" class="bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-white text-xs font-bold px-2.5 py-1 rounded-md shadow flex items-center space-x-1 transition active:scale-95" title="啟動數據分析破案小精靈 (4步套路手把手引導)">
+        <span>🧙‍♂️</span>
+        <span>分析小精靈</span>
+      </button>
+
       <span class="text-slate-700">|</span>
 
       <button onclick="openGuideModal()" class="text-amber-300 hover:text-amber-200 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-600/40 text-xs font-semibold px-2.5 py-1 rounded-md transition flex items-center space-x-1" title="查看 4 步思考 SOP 與圖表選擇指南">
@@ -551,6 +556,122 @@
   </div>
 
   <!-- ================= MODALS ================= -->
+
+  <!-- Modal: Interactive Analysis Wizard (分析小精靈 4 步套路導航對話框) -->
+  <div id="wizardModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm hidden items-center justify-center z-50 p-4 md:p-6 select-none">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden text-slate-100">
+      
+      <!-- Wizard Modal Header -->
+      <div class="px-6 py-4 bg-gradient-to-r from-slate-900 via-indigo-950/80 to-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-indigo-600 flex items-center justify-center text-xl shadow-lg shadow-indigo-500/20">
+            🧙‍♂️
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h2 class="text-base font-extrabold text-white tracking-wide">數據分析破案小精靈</h2>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">4 步套路手把手引導</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5 flex items-center space-x-2">
+              <span>📁 專案：<code class="text-amber-300 font-bold" id="wizardProjectLabel">--</code></span>
+              <span>•</span>
+              <span>📄 資料表：<code class="text-indigo-300 font-bold" id="wizardTableLabel">--</code></span>
+              <span>•</span>
+              <span>🎯 主角(Y)：<code class="text-rose-300 font-bold" id="wizardTargetLabel">--</code></span>
+            </p>
+          </div>
+        </div>
+        <button onclick="closeWizardModal()" class="text-slate-400 hover:text-white text-2xl font-bold leading-none p-1.5 rounded-lg hover:bg-slate-800 transition">&times;</button>
+      </div>
+
+      <!-- Step Navigation Pills (Tabs) -->
+      <div class="px-6 py-3 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between space-x-2 overflow-x-auto shrink-0 text-xs font-bold">
+        <button id="wizStepBtn1" onclick="switchWizardStep(1)" class="flex-1 py-2 px-3 rounded-xl border flex items-center justify-center space-x-2 transition bg-indigo-600 text-white border-indigo-500 shadow-md">
+          <span class="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">1</span>
+          <span>摸骨看主角</span>
+        </button>
+        <button id="wizStepBtn2" onclick="switchWizardStep(2)" class="flex-1 py-2 px-3 rounded-xl border flex items-center justify-center space-x-2 transition bg-slate-800/80 text-slate-400 border-slate-700/60 hover:text-slate-200">
+          <span class="w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center text-[10px]">2</span>
+          <span>全場抓戰犯</span>
+        </button>
+        <button id="wizStepBtn3" onclick="switchWizardStep(3)" class="flex-1 py-2 px-3 rounded-xl border flex items-center justify-center space-x-2 transition bg-slate-800/80 text-slate-400 border-slate-700/60 hover:text-slate-200">
+          <span class="w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center text-[10px]">3</span>
+          <span>找黃金分界線</span>
+        </button>
+        <button id="wizStepBtn4" onclick="switchWizardStep(4)" class="flex-1 py-2 px-3 rounded-xl border flex items-center justify-center space-x-2 transition bg-slate-800/80 text-slate-400 border-slate-700/60 hover:text-slate-200">
+          <span class="w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center text-[10px]">4</span>
+          <span>規則與算效益</span>
+        </button>
+      </div>
+
+      <!-- Wizard Step Dynamic Content Container -->
+      <div class="p-6 overflow-y-auto space-y-4 flex-1 text-xs select-text">
+        <!-- 區塊 A: 小精靈在想什麼 (白話文解說) -->
+        <div class="p-4 rounded-xl bg-gradient-to-r from-indigo-950/60 via-slate-900 to-indigo-950/40 border border-indigo-800/40 space-y-2">
+          <div class="flex items-center space-x-2 text-indigo-300 font-bold text-sm">
+            <span>🧙‍♂️</span>
+            <span id="wizardStepGoalTitle">第 1 招：摸骨看主角 —— 這家公司到底生了什麼病？問題有多嚴重？</span>
+          </div>
+          <p id="wizardStepThought" class="text-slate-300 leading-relaxed text-xs">
+            <!-- Dynamic explanation text -->
+          </p>
+        </div>
+
+        <!-- 區塊 B: 寫死的萬能公式與代碼 -->
+        <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-200 flex items-center space-x-1.5">
+              <span>📐</span>
+              <span id="wizardFormulaTitle">萬能寫死公式（套路模板）：</span>
+            </span>
+            <span class="text-[10px] text-emerald-400 font-mono bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded">
+              已自動帶入當前資料表
+            </span>
+          </div>
+          <div class="p-2.5 bg-slate-900/90 rounded-lg border border-slate-800 text-[11px] text-amber-200/90 leading-relaxed font-mono" id="wizardFormulaExplain">
+            <!-- Formula explanation -->
+          </div>
+          <div class="relative">
+            <pre class="bg-slate-950 p-3 rounded-lg border border-slate-800 text-indigo-300 font-mono text-[11px] overflow-x-auto leading-relaxed max-h-44" id="wizardCodePreview"></pre>
+            <button onclick="copyWizardCode()" class="absolute top-2 right-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold px-2 py-1 rounded transition border border-slate-700">
+              📋 複製
+            </button>
+          </div>
+        </div>
+
+        <!-- 區塊 C: 小精靈教你看圖 -->
+        <div class="p-4 rounded-xl bg-slate-950/50 border border-slate-800 space-y-2">
+          <div class="flex items-center space-x-2 text-amber-300 font-bold text-xs">
+            <span>👁️</span>
+            <span>小精靈教你怎麼看？（看圖與破案訣竅）：</span>
+          </div>
+          <p id="wizardHowToRead" class="text-slate-300 leading-relaxed text-xs">
+            <!-- How to read charts explanation -->
+          </p>
+        </div>
+      </div>
+
+      <!-- Wizard Modal Footer Buttons -->
+      <div class="px-6 py-3.5 bg-slate-950/90 border-t border-slate-800 flex items-center justify-between shrink-0">
+        <button id="wizPrevBtn" onclick="switchWizardStep(currentWizardStep - 1)" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition flex items-center space-x-1 border border-slate-700">
+          <span>⬅️</span>
+          <span>上一步</span>
+        </button>
+
+        <button onclick="executeCurrentWizardStep()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white text-xs font-extrabold shadow-lg shadow-indigo-600/30 flex items-center space-x-2 transition active:scale-95">
+          <span>🚀</span>
+          <span>帶入代碼並立即執行</span>
+          <span class="text-[10px] opacity-80">(看實際圖表)</span>
+        </button>
+
+        <button id="wizNextBtn" onclick="switchWizardStep(currentWizardStep + 1)" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1 shadow-md shadow-indigo-600/20">
+          <span>下一步</span>
+          <span>➡️</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
 
   <div id="healthCheckModal" class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-50 p-6">
     <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden">
@@ -3295,6 +3416,199 @@
     function closeHeaderToolsDropdown() {
       const menu = document.getElementById("headerToolsMenu");
       if (menu) menu.classList.add("hidden");
+    }
+
+    // ================= 🧭 數據分析破案小精靈 (Wizard Functions) =================
+    let currentWizardStep = 1;
+
+    function openWizardModal() {
+      const modal = document.getElementById("wizardModal");
+      if (!modal) return;
+
+      const target = document.getElementById("targetColSelector")?.value || (allTablesMeta[currentTable]?.columns?.[0]?.name || "未設定");
+      document.getElementById("wizardProjectLabel").textContent = currentFolder || "--";
+      document.getElementById("wizardTableLabel").textContent = currentTable || "--";
+      document.getElementById("wizardTargetLabel").textContent = target;
+
+      switchWizardStep(1);
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+    }
+
+    function closeWizardModal() {
+      const modal = document.getElementById("wizardModal");
+      if (!modal) return;
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+    }
+
+    function copyWizardCode() {
+      const pre = document.getElementById("wizardCodePreview");
+      if (!pre) return;
+      navigator.clipboard.writeText(pre.textContent).then(() => {
+        showToast("已複製小精靈公式代碼！", "📋");
+      });
+    }
+
+    function getWizardStepData(stepNum) {
+      const meta = allTablesMeta[currentTable] || {};
+      const cols = meta.columns || [];
+      const target = document.getElementById("targetColSelector")?.value || (cols[0]?.name || "DefectStatus");
+
+      // Pick numeric features excluding target
+      const numCols = cols.filter((c) => c.is_numeric && c.name !== target);
+      const f1 = numCols[0]?.name || "MaintenanceHours";
+      const f2 = numCols[1]?.name || (numCols.length > 1 ? numCols[1].name : "DefectRate");
+      const f1_min = numCols[0]?.min !== undefined ? numCols[0].min : 0;
+      const f1_max = numCols[0]?.max !== undefined ? numCols[0].max : 100;
+      const span = f1_max - f1_min;
+      const stepVal = span > 0 ? (span > 50 ? Math.round(span / 8) : (Math.round((span / 8) * 100) / 100 || 1)) : 1;
+      const cutoffVal = Math.round((f1_min + f1_max) / 2);
+
+      if (stepNum === 1) {
+        const sql = `-- 【Step 1 摸骨體檢公式】計算主角 ${target} 的各類別筆數與佔比
+SELECT 
+    "${target}" AS 主角類別,
+    COUNT(*) AS 總筆數,
+    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM "${currentTable}"), 2) AS 佔比百分比
+FROM "${currentTable}"
+GROUP BY "${target}"
+ORDER BY 總筆數 DESC
+LIMIT 25;`;
+
+        return {
+          goalTitle: `第 1 招：摸骨看主角 —— 這家公司到底生了什麼病？問題有多嚴重？`,
+          thought: `「主人，拿到任何新數據，千萬不要一開始就盲目畫十幾張圖！分析師的第一步永遠是『摸骨量體溫』：先問這張表的主角【${target}】（例如：異常 vs 正常、買 vs 不買、各類別分佈）佔比是多少？總量有多大？問題嚴不嚴重？」`,
+          formulaTitle: `萬能寫死公式 1（摸骨體檢模板）：`,
+          formulaExplain: `骨架模板：SELECT [主角欄位], COUNT(*) AS 總筆數, ROUND(COUNT(*) * 100.0 / 全表總數, 2) AS 佔比 FROM [表名] GROUP BY [主角欄位];`,
+          sql: sql,
+          howToRead: `「看柱狀圖高度或圓餅圖佔比！好品與壞品（或不同類別）的比例是否平衡？異常比例有沒有超過 15%~20%？這決定了我們後續要投入多大精力來抓犯人！」`,
+          title: `【Step 1 摸骨體檢】主角 ${target} 的分佈與佔比`,
+          step_tag: `Step 1: 看目標 (Target)`,
+          note: `💡 【小精靈 Step 1 摸骨結論】\n主角變數為 \`${target}\`。先檢查是否存在類別不平衡與問題嚴重性。`,
+          chart_config: { type: "bar", x_col: "主角類別", y1_col: "總筆數", y2_col: "佔比百分比" }
+        };
+      } else if (stepNum === 2) {
+        const sql = `-- 【Step 2 抓戰犯公式】比較不同 ${target} 下各關鍵特徵的平均值差距
+SELECT 
+    "${target}" AS 狀態分組,
+    COUNT(*) AS 筆數,
+    ROUND(AVG("${f1}"), 2) AS "平均_${f1}",
+    ROUND(AVG("${f2}"), 2) AS "平均_${f2}"
+FROM "${currentTable}"
+GROUP BY "${target}"
+ORDER BY 筆數 DESC;`;
+
+        return {
+          goalTitle: `第 2 招：全場抓戰犯 —— 欄位有幾十個，到底是哪 2~3 個在搞鬼？`,
+          thought: `「主角情況摸清了，但表裡有幾十個欄位，到底誰是幕後黑手？小精靈教您第二招『全場大對照』：把主角【${target}】分組，一口氣計算 ${f1} 與 ${f2} 的平均值！正常和異常平均值差距最大的那個，就是頭號嫌疑犯！」`,
+          formulaTitle: `萬能寫死公式 2（分組對比抓戰犯模板）：`,
+          formulaExplain: `骨架模板：SELECT [主角欄位], AVG(特徵1), AVG(特徵2) FROM [表名] GROUP BY [主角欄位];`,
+          sql: sql,
+          howToRead: `「看長條圖上的數值對比！如果好人和壞人的數值長度差不多，代表是干擾項（直接略過）；如果數值差了一大截（例如【${f1}】翻倍），抓到了！它就是最關鍵的大戰犯！」`,
+          title: `【Step 2 全場抓戰犯】依 ${target} 分組比較關鍵指標平均值`,
+          step_tag: `Step 2: 篩選重點 (Filter)`,
+          note: `💡 【小精靈 Step 2 抓戰犯結論】\n依 \`${target}\` 分組比對數值差距，找出平均值差異最大的首要嫌疑犯 \`${f1}\`！`,
+          chart_config: { type: "grouped_bar", x_col: "狀態分組", y1_col: `平均_${f1}`, y2_col: `平均_${f2}` }
+        };
+      } else if (stepNum === 3) {
+        const sql = `-- 【Step 3 找分界線公式】將戰犯 ${f1} 自動分段，逼出異常率飆升的臨界點 (Threshold)
+SELECT 
+    CAST(ROUND("${f1}" / ${stepVal}) * ${stepVal} AS TEXT) AS "${f1}_區間",
+    COUNT(*) AS 總筆數,
+    ROUND(AVG(CASE WHEN "${target}" IN (1, '1', 'Yes', 'True', 'true', 'defect', 'canceled') THEN 100.0 ELSE 0.0 END), 1) AS 異常率百分比
+FROM "${currentTable}"
+GROUP BY ROUND("${f1}" / ${stepVal}) * ${stepVal}
+ORDER BY ROUND("${f1}" / ${stepVal}) * ${stepVal};`;
+
+        return {
+          goalTitle: `第 3 招：逼出黃金分界線 —— 光說有影響會被老闆罵，超過多少算危險？`,
+          thought: `「抓到嫌疑犯【${f1}】後，老闆要的是：『到底超過多少算危險？產線幾點要拉警報？』第三招就是『區間分段雙軸法』：把 ${f1} 連續數值切成一段一段，搭配雙軸圖找出異常率突然飆高的那個轉折點！」`,
+          formulaTitle: `萬能寫死公式 3（區間分段雙軸圖模板）：`,
+          formulaExplain: `骨架模板：SELECT 切區間([戰犯]), COUNT(*) AS 筆數, AVG(主角)*100 AS 異常率 FROM [表名] GROUP BY 區間;`,
+          sql: sql,
+          howToRead: `「盯著雙軸圖上的【折線】看！長條柱代表樣本人數，折線代表異常率。折線原本在低檔平平的，在哪個區間突然『陡峭往上飆高』？那個向上拉高的數字，就是您的黃金分界線（Threshold）！」`,
+          title: `【Step 3 找黃金分界線】${f1} 區間轉折點探索`,
+          step_tag: `Step 3: 找分界線 (Threshold)`,
+          note: `💡 【小精靈 Step 3 找分界線結論】\n利用雙軸圖（長條看筆數、折線看異常率），抓出 \`${f1}\` 突破警戒的黃金臨界點！`,
+          chart_config: { type: "bar_line", x_col: `${f1}_區間`, y1_col: "異常率百分比", y2_col: "總筆數" }
+        };
+      } else {
+        const sql = `-- 【Step 4 規則與算效益公式】將分界線寫成商業規則，計算踩雷高風險群的業務規模
+SELECT 
+    COUNT(*) AS 踩雷高風險筆數,
+    (SELECT COUNT(*) FROM "${currentTable}") AS 全公司總業務筆數,
+    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM "${currentTable}"), 1) AS 高風險佔比百分比
+FROM "${currentTable}"
+WHERE "${f1}" >= ${cutoffVal};`;
+
+        return {
+          goalTitle: `第 4 招：規則與算效益 —— 寫成防堵方案，向老闆請功！`,
+          thought: `「找出黃金分界線後，分析還沒結束！最後一步是把分界線寫成業務規則（例如：『${f1} 超過臨界值強制預警』），並向主管報告：『如果這條規則生效，能替公司防堵多少案件、省下多少損失？』這就是向老闆請功的完美結尾！」`,
+          formulaTitle: `萬能寫死公式 4（規則封裝與效益評估模板）：`,
+          formulaExplain: `骨架模板：SELECT COUNT(*) AS 高危險數, COUNT(*)*100.0/總數 AS 佔比 FROM [表名] WHERE [戰犯] >= [分界線];`,
+          sql: sql,
+          howToRead: `「直接把這段結論寫進報告首頁：『只要在 ${f1} 突破臨界值時啟動預警機制，預計能精準防堵全公司 XX% 的潛在風險！』」`,
+          title: `【Step 4 規則與算效益】高風險規模評估與防堵效益`,
+          step_tag: `Step 4: 規則驗證 (Validate)`,
+          note: `💡 【小精靈 Step 4 效益結論】\n將分界線設定為警戒紅線，評估受影響規模，量化為能向主管報告的具體商業效益。`,
+          chart_config: { type: "bar", x_col: "高風險佔比百分比", y1_col: "踩雷高風險筆數", y2_col: "全公司總業務筆數" }
+        };
+      }
+    }
+
+    function switchWizardStep(stepNum) {
+      currentWizardStep = Math.max(1, Math.min(4, stepNum));
+
+      for (let i = 1; i <= 4; i++) {
+        const btn = document.getElementById(`wizStepBtn${i}`);
+        if (btn) {
+          if (i === currentWizardStep) {
+            btn.className = "flex-1 py-2 px-3 rounded-xl border flex items-center justify-center space-x-2 transition bg-indigo-600 text-white border-indigo-500 shadow-md";
+            btn.querySelector("span:first-child").className = "w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]";
+          } else {
+            btn.className = "flex-1 py-2 px-3 rounded-xl border flex items-center justify-center space-x-2 transition bg-slate-800/80 text-slate-400 border-slate-700/60 hover:text-slate-200 cursor-pointer";
+            btn.querySelector("span:first-child").className = "w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center text-[10px]";
+          }
+        }
+      }
+
+      const prevBtn = document.getElementById("wizPrevBtn");
+      const nextBtn = document.getElementById("wizNextBtn");
+      if (prevBtn) {
+        prevBtn.disabled = (currentWizardStep === 1);
+        prevBtn.className = (currentWizardStep === 1)
+          ? "px-4 py-2 rounded-xl bg-slate-800/50 text-slate-600 text-xs font-bold border border-slate-800 cursor-not-allowed"
+          : "px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition flex items-center space-x-1 border border-slate-700 cursor-pointer";
+      }
+      if (nextBtn) {
+        nextBtn.disabled = (currentWizardStep === 4);
+        nextBtn.className = (currentWizardStep === 4)
+          ? "px-4 py-2 rounded-xl bg-slate-800/50 text-slate-600 text-xs font-bold border border-slate-800 cursor-not-allowed"
+          : "px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1 shadow-md shadow-indigo-600/20 cursor-pointer";
+      }
+
+      const data = getWizardStepData(currentWizardStep);
+      document.getElementById("wizardStepGoalTitle").textContent = data.goalTitle;
+      document.getElementById("wizardStepThought").textContent = data.thought;
+      document.getElementById("wizardFormulaTitle").textContent = data.formulaTitle;
+      document.getElementById("wizardFormulaExplain").textContent = data.formulaExplain;
+      document.getElementById("wizardCodePreview").textContent = data.sql;
+      document.getElementById("wizardHowToRead").textContent = data.howToRead;
+    }
+
+    function executeCurrentWizardStep() {
+      const data = getWizardStepData(currentWizardStep);
+      closeWizardModal();
+
+      setEditorLanguage("sql");
+      cmEditor.setValue(data.sql);
+      document.getElementById("noteTitleInput").value = data.title;
+      document.getElementById("noteStepTagInput").value = data.step_tag;
+      document.getElementById("noteContentInput").value = data.note;
+
+      runCurrentCode(data.chart_config);
+      showToast(`🧙‍♂️ 已帶入並執行【${data.title}】！`, "🚀");
     }
 
     document.addEventListener("click", (e) => {
