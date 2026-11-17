@@ -581,7 +581,20 @@
             </p>
           </div>
         </div>
-        <button onclick="closeWizardModal()" class="text-slate-400 hover:text-white text-2xl font-bold leading-none p-1.5 rounded-lg hover:bg-slate-800 transition">&times;</button>
+        <!-- Right Side: Dual-Engine Toggle + Close Button -->
+        <div class="flex items-center space-x-3">
+          <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner">
+            <button id="wizLangSqlBtn" onclick="setWizardLang('sql')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer bg-indigo-600 text-white shadow-sm" title="切換為 SQL 4 步分析套路">
+              <span>💻</span>
+              <span>SQL 套路</span>
+            </button>
+            <button id="wizLangPyBtn" onclick="setWizardLang('python')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer text-slate-400 hover:text-white" title="切換為 Python (Pandas/Seaborn/Scikit-Learn) 4 步分析套路">
+              <span>🐍</span>
+              <span>Python (Pandas) 套路</span>
+            </button>
+          </div>
+          <button onclick="closeWizardModal()" class="text-slate-400 hover:text-white text-2xl font-bold leading-none p-1.5 rounded-lg hover:bg-slate-800 transition cursor-pointer">&times;</button>
+        </div>
       </div>
 
       <!-- Step Navigation Pills (Tabs) -->
@@ -624,8 +637,8 @@
               <span>📐</span>
               <span id="wizardFormulaTitle">萬能寫死公式（套路模板）：</span>
             </span>
-            <span class="text-[10px] text-emerald-400 font-mono bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded">
-              已自動帶入當前資料表
+            <span id="wizardCodeLangBadge" class="text-[10px] text-indigo-300 font-mono bg-indigo-950/60 border border-indigo-800/60 px-2 py-0.5 rounded">
+              SQL 模式已自動帶入當前資料表
             </span>
           </div>
           <div class="p-2.5 bg-slate-900/90 rounded-lg border border-slate-800 text-[11px] text-amber-200/90 leading-relaxed font-mono" id="wizardFormulaExplain">
@@ -658,10 +671,10 @@
           <span>上一步</span>
         </button>
 
-        <button onclick="executeCurrentWizardStep()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white text-xs font-extrabold shadow-lg shadow-indigo-600/30 flex items-center space-x-2 transition active:scale-95">
+        <button onclick="executeCurrentWizardStep()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white text-xs font-extrabold shadow-lg shadow-indigo-600/30 flex items-center space-x-2 transition active:scale-95 cursor-pointer">
           <span>🚀</span>
-          <span>帶入代碼並立即執行</span>
-          <span class="text-[10px] opacity-80">(看實際圖表)</span>
+          <span id="wizExecBtnText">帶入代碼並立即執行 (SQL)</span>
+          <span class="text-[10px] opacity-80" id="wizExecSubText">(看實際圖表)</span>
         </button>
 
         <button id="wizNextBtn" onclick="switchWizardStep(currentWizardStep + 1)" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1 shadow-md shadow-indigo-600/20">
@@ -3418,8 +3431,38 @@
       if (menu) menu.classList.add("hidden");
     }
 
-    // ================= 🧭 數據分析破案小精靈 (Wizard Functions) =================
+    // ================= 🧭 數據分析破案小精靈 (Wizard Functions: SQL + Python 雙引擎) =================
     let currentWizardStep = 1;
+    let currentWizardLang = "sql";
+
+    function setWizardLang(lang) {
+      currentWizardLang = (lang === "python") ? "python" : "sql";
+
+      const sqlBtn = document.getElementById("wizLangSqlBtn");
+      const pyBtn = document.getElementById("wizLangPyBtn");
+      const badge = document.getElementById("wizardCodeLangBadge");
+      const execBtnText = document.getElementById("wizExecBtnText");
+
+      if (currentWizardLang === "python") {
+        if (sqlBtn) sqlBtn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer text-slate-400 hover:text-white";
+        if (pyBtn) pyBtn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer bg-emerald-600 text-white shadow-sm";
+        if (badge) {
+          badge.textContent = "Python 模式已自動帶入當前資料表 (df)";
+          badge.className = "text-[10px] text-emerald-400 font-mono bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded";
+        }
+        if (execBtnText) execBtnText.textContent = "帶入代碼並立即執行 (Python)";
+      } else {
+        if (sqlBtn) sqlBtn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer bg-indigo-600 text-white shadow-sm";
+        if (pyBtn) pyBtn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer text-slate-400 hover:text-white";
+        if (badge) {
+          badge.textContent = "SQL 模式已自動帶入當前資料表";
+          badge.className = "text-[10px] text-indigo-300 font-mono bg-indigo-950/60 border border-indigo-800/60 px-2 py-0.5 rounded";
+        }
+        if (execBtnText) execBtnText.textContent = "帶入代碼並立即執行 (SQL)";
+      }
+
+      switchWizardStep(currentWizardStep);
+    }
 
     function openWizardModal() {
       const modal = document.getElementById("wizardModal");
@@ -3429,6 +3472,10 @@
       document.getElementById("wizardProjectLabel").textContent = currentFolder || "--";
       document.getElementById("wizardTableLabel").textContent = currentTable || "--";
       document.getElementById("wizardTargetLabel").textContent = target;
+
+      // 自動同步編輯器當前語言
+      currentWizardLang = (currentEditorLang === "python") ? "python" : "sql";
+      setWizardLang(currentWizardLang);
 
       switchWizardStep(1);
       modal.classList.remove("hidden");
@@ -3450,12 +3497,12 @@
       });
     }
 
-    function getWizardStepData(stepNum) {
+    function getWizardStepData(stepNum, lang = currentWizardLang) {
       const meta = allTablesMeta[currentTable] || {};
       const cols = meta.columns || [];
       const target = document.getElementById("targetColSelector")?.value || (cols[0]?.name || "DefectStatus");
 
-      // Pick numeric features excluding target
+      // 提取數值型欄位（排除主角變數）
       const numCols = cols.filter((c) => c.is_numeric && c.name !== target);
       const f1 = numCols[0]?.name || "MaintenanceHours";
       const f2 = numCols[1]?.name || (numCols.length > 1 ? numCols[1].name : "DefectRate");
@@ -3465,6 +3512,192 @@
       const stepVal = span > 0 ? (span > 50 ? Math.round(span / 8) : (Math.round((span / 8) * 100) / 100 || 1)) : 1;
       const cutoffVal = Math.round((f1_min + f1_max) / 2);
 
+      // ==================== PYTHON (PANDAS / SEABORN) 模式 ====================
+      if (lang === "python") {
+        if (stepNum === 1) {
+          const pyCode = `# 【Step 1 摸骨體檢】主角變數分佈與異常佔比體檢
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+plt.figure(figsize=(7, 4.5))
+plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei', 'SimHei', 'sans-serif']
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1. 計算各類別總數與佔比
+counts = df['${target}'].value_counts()
+pcts = df['${target}'].value_counts(normalize=True) * 100
+
+# 2. 繪製主角分佈長條圖
+ax = sns.countplot(data=df, x='${target}', palette='viridis')
+plt.title('Step 1: 主角 [${target}] 類別分佈與佔比', fontsize=12, fontweight='bold')
+plt.xlabel('${target}')
+plt.ylabel('筆數')
+
+# 3. 在柱體上標註數量與百分比
+for p in ax.patches:
+    h = p.get_height()
+    if h > 0:
+        pct = (h / len(df)) * 100
+        ax.annotate(f'{int(h):,}筆\\n({pct:.1f}%)',
+                    (p.get_x() + p.get_width() / 2., h / 2),
+                    ha='center', va='center', color='white', fontweight='bold', fontsize=10)
+
+plt.tight_layout()
+plt.show()
+
+# 4. 輸出統計摘要表
+pd.DataFrame({'筆數': counts, '佔比(%)': pcts.round(2)})`;
+
+          return {
+            goalTitle: `第 1 招：摸骨看主角 —— 這家公司到底生了什麼病？問題有多嚴重？`,
+            thought: `「主人，拿到任何新數據，在 Python 裡第一步永遠是『摸骨量體溫』：先檢查主角變數【${target}】的數值分佈、異常比率與總量！我們用 Pandas 的 value_counts(normalize=True) 算佔比，並搭配 Seaborn 的 countplot 畫出視覺化柱狀圖，一眼看出問題嚴不嚴重！」`,
+            formulaTitle: `萬能 Python 摸骨公式（套路模板）：`,
+            formulaExplain: `骨架模板：df['主角'].value_counts(normalize=True) * 100 搭配 sns.countplot(data=df, x='主角')`,
+            code: pyCode,
+            sql: pyCode,
+            howToRead: `「看柱狀圖高度與百分比標註！異常類別的比例有沒有過低（如 < 5% 屬於高度不平衡）或超過 20%？這決定了後續分析與建模是否需要做採樣加權，以及問題有多普遍！」`,
+            title: `【Step 1 摸骨體檢】主角 ${target} 的分佈與佔比 (Python)`,
+            step_tag: `Step 1: 看目標 (Target)`,
+            note: `💡 【小精靈 Step 1 摸骨結論 (Python)】\n主角變數為 \`${target}\`。先檢查是否存在類別不平衡、各類別佔比與問題嚴重性。`,
+            chart_config: null
+          };
+        } else if (stepNum === 2) {
+          const pyCode = `# 【Step 2 全場抓戰犯】全特徵相關係數熱力圖與分組平均值比對
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+plt.figure(figsize=(8, 5))
+plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei', 'SimHei', 'sans-serif']
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1. 篩選數值欄位並計算相關矩陣
+num_cols = df.select_dtypes(include=['number']).columns.tolist()
+corr_matrix = df[num_cols].corr()
+
+# 2. 繪製相關矩陣熱力圖 (鎖定相關係數最高的欄位)
+sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt='.2f', vmin=-1, vmax=1, linewidths=0.5)
+plt.title('Step 2: 數值特徵相關矩陣熱力圖 (快速鎖定高相關欄位)', fontsize=12, fontweight='bold')
+plt.tight_layout()
+plt.show()
+
+# 3. 依主角分組計算各特徵平均值 (轉置便於比對)
+df.groupby('${target}')[num_cols].mean().T`;
+
+          return {
+            goalTitle: `第 2 招：全場抓戰犯 —— 欄位有幾十個，到底是哪 2~3 個在搞鬼？`,
+            thought: `「主角情況摸清了，但表裡有幾十個欄位，到底誰是幕後黑手？Python 的第二步套路是『全場相關係數熱力圖 (Heatmap) + 分組平均值對比』！直接一鍵計算全表數值欄位相關性，一眼揪出誰與主角關係最密切！」`,
+            formulaTitle: `萬能 Python 抓戰犯公式（套路模板）：`,
+            formulaExplain: `骨架模板：df.corr() 搭配 sns.heatmap，以及 df.groupby('主角')[數值欄位].mean().T`,
+            code: pyCode,
+            sql: pyCode,
+            howToRead: `「盯著熱力圖上最紅（強正相關）或最藍（強負相關）的格子！相關係數絕對值 |r| >= 0.15 的欄位（例如【${f1}】），就是頭號嫌疑犯！接著看下方分組平均值表，兩組差距最大的就是戰犯！」`,
+            title: `【Step 2 全場抓戰犯】特徵相關係數熱力圖與分組平均 (Python)`,
+            step_tag: `Step 2: 篩選重點 (Filter)`,
+            note: `💡 【小精靈 Step 2 抓戰犯結論 (Python)】\n透過相關係數熱力圖與分組平均值對照，鎖定幕後關鍵影響特徵 \`${f1}\`！`,
+            chart_config: null
+          };
+        } else if (stepNum === 3) {
+          const pyCode = `# 【Step 3 找黃金分界線】箱型圖看分佈差異 + pd.cut 區間切分異常率
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+plt.figure(figsize=(8, 4.5))
+plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei', 'SimHei', 'sans-serif']
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1. 繪製箱型圖與散佈點
+sns.boxplot(data=df, x='${target}', y='${f1}', palette='Set2')
+sns.stripplot(data=df, x='${target}', y='${f1}', color='black', alpha=0.15, jitter=0.2)
+
+# 2. 標註建議警戒切分線
+plt.axhline(${cutoffVal}, color='red', linestyle='--', linewidth=2, label='建議警戒切分線 (${cutoffVal})')
+plt.title('Step 3: 戰犯 [${f1}] 依主角分組的箱型分佈與臨界線', fontsize=12, fontweight='bold')
+plt.xlabel('${target}')
+plt.ylabel('${f1}')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+# 3. 使用 pd.cut 進行 6 等分區間切分並統計異常分佈
+df['${f1}_區間'] = pd.cut(df['${f1}'], bins=6)
+bucket_stats = df.groupby('${f1}_區間', observed=False).agg(
+    總筆數=('${target}', 'count'),
+    目標均值=('${target}', lambda s: pd.to_numeric(s, errors='coerce').mean())
+).reset_index()
+bucket_stats`;
+
+          return {
+            goalTitle: `第 3 招：逼出黃金分界線 —— 光說有影響會被老闆罵，超過多少算危險？`,
+            thought: `「鎖定嫌疑犯【${f1}】後，老闆要的是臨界點！在 Python 裡，我們用『箱型圖 (Boxplot) + 散佈點 (Stripplot)』直觀觀察兩組的數值分水嶺，再搭配 pd.cut 將連續數值切成 6 個區間，精準計算每個區間的異常率！」`,
+            formulaTitle: `萬能 Python 分界線公式（套路模板）：`,
+            formulaExplain: `骨架模板：sns.boxplot(data=df, x='主角', y='戰犯') 搭配 pd.cut(df['戰犯'], bins=6) 統計各區間異常率`,
+            code: pyCode,
+            sql: pyCode,
+            howToRead: `「看箱型圖的紅虛線警戒位置！中位數與四分位距（箱子厚度）是否明顯錯開？觀察下方區間統計表，在哪個區間開始異常率突然飆升？那個分界點就是日後防堵規則的黃金 Threshold！」`,
+            title: `【Step 3 找黃金分界線】${f1} 箱型圖與區間切分分析 (Python)`,
+            step_tag: `Step 3: 找分界線 (Threshold)`,
+            note: `💡 【小精靈 Step 3 找分界線結論 (Python)】\n利用箱型分佈與 \`pd.cut\` 區間切分，找出異常率飆升的臨界點 \`${cutoffVal}\`！`,
+            chart_config: null
+          };
+        } else {
+          const pyCode = `# 【Step 4 規則與機器學習驗證】隨機森林特徵重要性排行與高風險防堵規模
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.ensemble import RandomForestClassifier
+
+plt.figure(figsize=(7, 4.5))
+plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei', 'SimHei', 'sans-serif']
+plt.rcParams['axes.unicode_minus'] = False
+
+# 1. 準備特徵矩陣 (自動轉 One-Hot 編碼並補中位數，排除臨時產生的區間欄位)
+feature_cols = [c for c in df.columns if c != '${target}' and not c.endswith('_區間')]
+X = pd.get_dummies(df[feature_cols], drop_first=True)
+X = X.fillna(X.median(numeric_only=True))
+y = df['${target}'].astype(str)
+
+# 2. 訓練隨機森林模型
+rf = RandomForestClassifier(n_estimators=100, random_state=42)
+rf.fit(X, y)
+
+# 3. 繪製特徵重要性長條圖 (TOP 10)
+feat_imp = pd.Series(rf.feature_importances_, index=X.columns).sort_values(ascending=False).head(10)
+sns.barplot(x=feat_imp.values, y=feat_imp.index, palette='magma')
+plt.title('Step 4: 隨機森林特徵重要性排行 TOP 10', fontsize=12, fontweight='bold')
+plt.xlabel('重要性權重 (Feature Importance)')
+plt.tight_layout()
+plt.show()
+
+# 4. 業務規則成效評估
+high_risk = df[df['${f1}'] >= ${cutoffVal}]
+risk_ratio = (len(high_risk) / len(df)) * 100
+print("🎯 業務規則成效評估：")
+print(f"• 警戒規則：[${f1} >= {${cutoffVal}}]")
+print(f"• 命中高風險規模：{len(high_risk):,} 筆")
+print(f"• 佔全公司業務比率：{risk_ratio:.1f}%")`;
+
+          return {
+            goalTitle: `第 4 招：規則與算效益 —— 寫成防堵方案，向老闆請功！`,
+            thought: `「分析的最後一步是驗證與請功！我們用『隨機森林 (RandomForest)』特徵重要性權重驗證 ${f1} 是否真的是機器學習認證的第一名特徵，再將臨界值轉化為防堵業務規則，計算能為公司守住多少風險！」`,
+            formulaTitle: `萬能 Python 規則驗證公式（套路模板）：`,
+            formulaExplain: `骨架模板：RandomForestClassifier().fit(X, y) 計算 feature_importances_ + 篩選條件統計業務規模`,
+            code: pyCode,
+            sql: pyCode,
+            howToRead: `「看特徵重要性長條圖！機器學習模型排在最前方的特徵是否與我們前幾步找到的戰犯一致？如果是，代表您的業務直覺完全通過機器學習演算法的檢驗！接著看下方列印的成效數字，直接作為向主管匯報的量化成果！」`,
+            title: `【Step 4 規則與機器學習驗證】隨機森林重要性與效益評估 (Python)`,
+            step_tag: `Step 4: 規則驗證 (Validate)`,
+            note: `💡 【小精靈 Step 4 效益結論 (Python)】\n隨機森林驗證特徵權重，量化高風險規則影響範圍，產出具備業務價值的防堵方案！`,
+            chart_config: null
+          };
+        }
+      }
+
+      // ==================== SQL (SQLITE + CHART.JS) 模式 ====================
       if (stepNum === 1) {
         const sql = `-- 【Step 1 摸骨體檢公式】計算主角 ${target} 的各類別筆數與佔比
 SELECT 
@@ -3479,13 +3712,14 @@ LIMIT 25;`;
         return {
           goalTitle: `第 1 招：摸骨看主角 —— 這家公司到底生了什麼病？問題有多嚴重？`,
           thought: `「主人，拿到任何新數據，千萬不要一開始就盲目畫十幾張圖！分析師的第一步永遠是『摸骨量體溫』：先問這張表的主角【${target}】（例如：異常 vs 正常、買 vs 不買、各類別分佈）佔比是多少？總量有多大？問題嚴不嚴重？」`,
-          formulaTitle: `萬能寫死公式 1（摸骨體檢模板）：`,
+          formulaTitle: `萬能 SQL 摸骨公式（套路模板）：`,
           formulaExplain: `骨架模板：SELECT [主角欄位], COUNT(*) AS 總筆數, ROUND(COUNT(*) * 100.0 / 全表總數, 2) AS 佔比 FROM [表名] GROUP BY [主角欄位];`,
+          code: sql,
           sql: sql,
           howToRead: `「看柱狀圖高度或圓餅圖佔比！好品與壞品（或不同類別）的比例是否平衡？異常比例有沒有超過 15%~20%？這決定了我們後續要投入多大精力來抓犯人！」`,
-          title: `【Step 1 摸骨體檢】主角 ${target} 的分佈與佔比`,
+          title: `【Step 1 摸骨體檢】主角 ${target} 的分佈與佔比 (SQL)`,
           step_tag: `Step 1: 看目標 (Target)`,
-          note: `💡 【小精靈 Step 1 摸骨結論】\n主角變數為 \`${target}\`。先檢查是否存在類別不平衡與問題嚴重性。`,
+          note: `💡 【小精靈 Step 1 摸骨結論 (SQL)】\n主角變數為 \`${target}\`。先檢查是否存在類別不平衡與問題嚴重性。`,
           chart_config: { type: "bar", x_col: "主角類別", y1_col: "總筆數", y2_col: "佔比百分比" }
         };
       } else if (stepNum === 2) {
@@ -3502,13 +3736,14 @@ ORDER BY 筆數 DESC;`;
         return {
           goalTitle: `第 2 招：全場抓戰犯 —— 欄位有幾十個，到底是哪 2~3 個在搞鬼？`,
           thought: `「主角情況摸清了，但表裡有幾十個欄位，到底誰是幕後黑手？小精靈教您第二招『全場大對照』：把主角【${target}】分組，一口氣計算 ${f1} 與 ${f2} 的平均值！正常和異常平均值差距最大的那個，就是頭號嫌疑犯！」`,
-          formulaTitle: `萬能寫死公式 2（分組對比抓戰犯模板）：`,
+          formulaTitle: `萬能 SQL 抓戰犯公式（套路模板）：`,
           formulaExplain: `骨架模板：SELECT [主角欄位], AVG(特徵1), AVG(特徵2) FROM [表名] GROUP BY [主角欄位];`,
+          code: sql,
           sql: sql,
           howToRead: `「看長條圖上的數值對比！如果好人和壞人的數值長度差不多，代表是干擾項（直接略過）；如果數值差了一大截（例如【${f1}】翻倍），抓到了！它就是最關鍵的大戰犯！」`,
-          title: `【Step 2 全場抓戰犯】依 ${target} 分組比較關鍵指標平均值`,
+          title: `【Step 2 全場抓戰犯】依 ${target} 分組比較關鍵指標平均值 (SQL)`,
           step_tag: `Step 2: 篩選重點 (Filter)`,
-          note: `💡 【小精靈 Step 2 抓戰犯結論】\n依 \`${target}\` 分組比對數值差距，找出平均值差異最大的首要嫌疑犯 \`${f1}\`！`,
+          note: `💡 【小精靈 Step 2 抓戰犯結論 (SQL)】\n依 \`${target}\` 分組比對數值差距，找出平均值差異最大的首要嫌疑犯 \`${f1}\`！`,
           chart_config: { type: "grouped_bar", x_col: "狀態分組", y1_col: `平均_${f1}`, y2_col: `平均_${f2}` }
         };
       } else if (stepNum === 3) {
@@ -3524,13 +3759,14 @@ ORDER BY ROUND("${f1}" / ${stepVal}) * ${stepVal};`;
         return {
           goalTitle: `第 3 招：逼出黃金分界線 —— 光說有影響會被老闆罵，超過多少算危險？`,
           thought: `「抓到嫌疑犯【${f1}】後，老闆要的是：『到底超過多少算危險？產線幾點要拉警報？』第三招就是『區間分段雙軸法』：把 ${f1} 連續數值切成一段一段，搭配雙軸圖找出異常率突然飆高的那個轉折點！」`,
-          formulaTitle: `萬能寫死公式 3（區間分段雙軸圖模板）：`,
+          formulaTitle: `萬能 SQL 分界線公式（套路模板）：`,
           formulaExplain: `骨架模板：SELECT 切區間([戰犯]), COUNT(*) AS 筆數, AVG(主角)*100 AS 異常率 FROM [表名] GROUP BY 區間;`,
+          code: sql,
           sql: sql,
           howToRead: `「盯著雙軸圖上的【折線】看！長條柱代表樣本人數，折線代表異常率。折線原本在低檔平平的，在哪個區間突然『陡峭往上飆高』？那個向上拉高的數字，就是您的黃金分界線（Threshold）！」`,
-          title: `【Step 3 找黃金分界線】${f1} 區間轉折點探索`,
+          title: `【Step 3 找黃金分界線】${f1} 區間轉折點探索 (SQL)`,
           step_tag: `Step 3: 找分界線 (Threshold)`,
-          note: `💡 【小精靈 Step 3 找分界線結論】\n利用雙軸圖（長條看筆數、折線看異常率），抓出 \`${f1}\` 突破警戒的黃金臨界點！`,
+          note: `💡 【小精靈 Step 3 找分界線結論 (SQL)】\n利用雙軸圖（長條看筆數、折線看異常率），抓出 \`${f1}\` 突破警戒的黃金臨界點！`,
           chart_config: { type: "bar_line", x_col: `${f1}_區間`, y1_col: "異常率百分比", y2_col: "總筆數" }
         };
       } else {
@@ -3545,13 +3781,14 @@ WHERE "${f1}" >= ${cutoffVal};`;
         return {
           goalTitle: `第 4 招：規則與算效益 —— 寫成防堵方案，向老闆請功！`,
           thought: `「找出黃金分界線後，分析還沒結束！最後一步是把分界線寫成業務規則（例如：『${f1} 超過臨界值強制預警』），並向主管報告：『如果這條規則生效，能替公司防堵多少案件、省下多少損失？』這就是向老闆請功的完美結尾！」`,
-          formulaTitle: `萬能寫死公式 4（規則封裝與效益評估模板）：`,
+          formulaTitle: `萬能 SQL 規則與效益公式（套路模板）：`,
           formulaExplain: `骨架模板：SELECT COUNT(*) AS 高危險數, COUNT(*)*100.0/總數 AS 佔比 FROM [表名] WHERE [戰犯] >= [分界線];`,
+          code: sql,
           sql: sql,
           howToRead: `「直接把這段結論寫進報告首頁：『只要在 ${f1} 突破臨界值時啟動預警機制，預計能精準防堵全公司 XX% 的潛在風險！』」`,
-          title: `【Step 4 規則與算效益】高風險規模評估與防堵效益`,
+          title: `【Step 4 規則與算效益】高風險規模評估與防堵效益 (SQL)`,
           step_tag: `Step 4: 規則驗證 (Validate)`,
-          note: `💡 【小精靈 Step 4 效益結論】\n將分界線設定為警戒紅線，評估受影響規模，量化為能向主管報告的具體商業效益。`,
+          note: `💡 【小精靈 Step 4 效益結論 (SQL)】\n將分界線設定為警戒紅線，評估受影響規模，量化為能向主管報告的具體商業效益。`,
           chart_config: { type: "bar", x_col: "高風險佔比百分比", y1_col: "踩雷高風險筆數", y2_col: "全公司總業務筆數" }
         };
       }
@@ -3560,11 +3797,15 @@ WHERE "${f1}" >= ${cutoffVal};`;
     function switchWizardStep(stepNum) {
       currentWizardStep = Math.max(1, Math.min(4, stepNum));
 
+      const activeTabClass = (currentWizardLang === "python")
+        ? "flex-1 py-2 px-3 rounded-xl border flex items-center justify-center space-x-2 transition bg-emerald-600 text-white border-emerald-500 shadow-md"
+        : "flex-1 py-2 px-3 rounded-xl border flex items-center justify-center space-x-2 transition bg-indigo-600 text-white border-indigo-500 shadow-md";
+
       for (let i = 1; i <= 4; i++) {
         const btn = document.getElementById(`wizStepBtn${i}`);
         if (btn) {
           if (i === currentWizardStep) {
-            btn.className = "flex-1 py-2 px-3 rounded-xl border flex items-center justify-center space-x-2 transition bg-indigo-600 text-white border-indigo-500 shadow-md";
+            btn.className = activeTabClass;
             btn.querySelector("span:first-child").className = "w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]";
           } else {
             btn.className = "flex-1 py-2 px-3 rounded-xl border flex items-center justify-center space-x-2 transition bg-slate-800/80 text-slate-400 border-slate-700/60 hover:text-slate-200 cursor-pointer";
@@ -3585,29 +3826,35 @@ WHERE "${f1}" >= ${cutoffVal};`;
         nextBtn.disabled = (currentWizardStep === 4);
         nextBtn.className = (currentWizardStep === 4)
           ? "px-4 py-2 rounded-xl bg-slate-800/50 text-slate-600 text-xs font-bold border border-slate-800 cursor-not-allowed"
-          : "px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1 shadow-md shadow-indigo-600/20 cursor-pointer";
+          : (currentWizardLang === "python"
+              ? "px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center space-x-1 shadow-md shadow-emerald-600/20 cursor-pointer"
+              : "px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1 shadow-md shadow-indigo-600/20 cursor-pointer");
       }
 
-      const data = getWizardStepData(currentWizardStep);
+      const data = getWizardStepData(currentWizardStep, currentWizardLang);
       document.getElementById("wizardStepGoalTitle").textContent = data.goalTitle;
       document.getElementById("wizardStepThought").textContent = data.thought;
       document.getElementById("wizardFormulaTitle").textContent = data.formulaTitle;
       document.getElementById("wizardFormulaExplain").textContent = data.formulaExplain;
-      document.getElementById("wizardCodePreview").textContent = data.sql;
+      document.getElementById("wizardCodePreview").textContent = data.code || data.sql;
       document.getElementById("wizardHowToRead").textContent = data.howToRead;
     }
 
     function executeCurrentWizardStep() {
-      const data = getWizardStepData(currentWizardStep);
+      const data = getWizardStepData(currentWizardStep, currentWizardLang);
       closeWizardModal();
 
-      setEditorLanguage("sql");
-      cmEditor.setValue(data.sql);
+      setEditorLanguage(currentWizardLang);
+      cmEditor.setValue(data.code || data.sql);
       document.getElementById("noteTitleInput").value = data.title;
       document.getElementById("noteStepTagInput").value = data.step_tag;
       document.getElementById("noteContentInput").value = data.note;
 
-      runCurrentCode(data.chart_config);
+      if (currentWizardLang === "sql") {
+        runCurrentCode(data.chart_config);
+      } else {
+        runCurrentCode();
+      }
       showToast(`🧙‍♂️ 已帶入並執行【${data.title}】！`, "🚀");
     }
 
