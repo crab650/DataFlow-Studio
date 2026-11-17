@@ -1993,11 +1993,31 @@ def handle_notes():
     data = request.get_json() or {}
     table_name = data.get("table", table_name)
     f_name = resolve_folder_for_table(table_name, data.get("folder", folder_arg))
-    notes = data.get("notes", [])
     notes_dict = load_all_notes_dict(f_name)
-    notes_dict[table_name] = notes
-    save_all_notes_dict(notes_dict, f_name)
-    return jsonify({"message": f"已儲存至專案 `{f_name}` 的專屬筆記庫 (`{table_name}`)！", "count": len(notes)})
+
+    if "notes_dict" in data and isinstance(data["notes_dict"], dict):
+        notes_dict.update(data["notes_dict"])
+        save_all_notes_dict(notes_dict, f_name)
+        return jsonify({"message": f"已儲存專案 `{f_name}` 全部筆記！", "folder": f_name})
+
+    notes = data.get("notes", [])
+    has_from_table = any(isinstance(n, dict) and "_fromTable" in n for n in notes)
+    if has_from_table:
+        grouped = {}
+        for n in notes:
+            t = n.get("_fromTable", table_name)
+            if t not in grouped:
+                grouped[t] = []
+            n_clean = {k: v for k, v in n.items() if k != "_fromTable"}
+            grouped[t].append(n_clean)
+        for t, t_notes in grouped.items():
+            notes_dict[t] = t_notes
+        save_all_notes_dict(notes_dict, f_name)
+        return jsonify({"message": f"已儲存專案 `{f_name}` 筆記庫！", "count": len(notes)})
+    else:
+        notes_dict[table_name] = notes
+        save_all_notes_dict(notes_dict, f_name)
+        return jsonify({"message": f"已儲存至專案 `{f_name}` 的專屬筆記庫 (`{table_name}`)！", "count": len(notes)})
 
 
 @app.route("/api/reset_default_notes", methods=["POST"])

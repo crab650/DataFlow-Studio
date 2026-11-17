@@ -249,9 +249,9 @@
         <div class="p-2 border-b border-slate-100 bg-slate-50 space-y-1.5 shrink-0">
           <div class="flex items-center justify-between px-0.5">
             <div class="flex items-center space-x-1.5 truncate">
-              <span class="text-[11px] font-bold text-slate-600 truncate" id="sidebarProjectLabel">📂 表: defects</span>
-              <button id="notesScopeToggleBtn" onclick="toggleNotesScope()" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 hover:bg-indigo-100 text-slate-700 hover:text-indigo-800 border border-slate-300 transition shrink-0" title="切換顯示：僅目前表筆記 或 專案全表筆記">
-                📄 當前表
+              <span class="text-[11px] font-bold text-slate-600 truncate" id="sidebarProjectLabel">📁 專案程式庫</span>
+              <button id="notesScopeToggleBtn" onclick="toggleNotesScope()" class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-600 text-white border border-indigo-700 shadow-sm transition shrink-0" title="點擊切換：專案全表程式常駐 或 僅篩選當前表">
+                📚 專案常駐
               </button>
             </div>
             <div class="flex space-x-1">
@@ -825,7 +825,7 @@
     let allFoldersMeta = {};
     let currentFolder = "01_Manufacturing_Quality_ERP";
     let currentTable = "defects";
-    let notesScope = "table"; // "table" or "folder"
+    let notesScope = "folder"; // "folder" (專案全表常駐) or "table" (僅當前表)
     let schemaSidebarFilter = "all"; // 'all' or specific table name
     let colDictEditingTable = "defects"; // table currently selected in #colDictModal
     let currentZoomScale = 100;
@@ -1243,7 +1243,7 @@
       notesScope = (notesScope === "table" ? "folder" : "table");
       const btn = document.getElementById("notesScopeToggleBtn");
       if (btn) {
-        btn.textContent = (notesScope === "table" ? "📄 當前表" : "📚 專案全表");
+        btn.textContent = (notesScope === "table" ? "📄 單表過濾" : "📚 專案常駐");
         btn.className = (notesScope === "table" 
           ? "text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 hover:bg-indigo-100 text-slate-700 hover:text-indigo-800 border border-slate-300 transition shrink-0"
           : "text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-600 text-white border border-indigo-700 shadow-sm transition shrink-0");
@@ -1435,7 +1435,17 @@
 
       syncFolderAndTableSelectors();
       renderSchemaSidebar();
-      await onProjectSwitch(currentTable);
+
+      // Clear previous project's in-memory notes and load this project's notes & custom folders
+      savedNotes = [];
+      await loadSavedNotesForCurrentTable();
+      if (savedNotes.length > 0) {
+        selectNoteById(savedNotes[0].id);
+      } else if (currentTable) {
+        setEditorLanguage("sql");
+        cmEditor.setValue(`SELECT * FROM "${currentTable}" LIMIT 25;`);
+        runCurrentCode();
+      }
 
       if (folderTables.length > 0) {
         showStatus(`📁 已切換至專案「datasets/${currentFolder}/」（共 ${folderTables.length} 張資料表）`, false);
@@ -1454,32 +1464,42 @@
         currentFolder = firstNew.folder;
         currentTable = firstNew.table;
         await loadTablesMeta();
-        await onProjectSwitch(currentTable);
+        await onFolderSwitch(currentFolder);
       }
       showStatus(data.message || "✅ 資料夾掃描完成", false);
     }
 
-    // Switch Project (Dataset) -> Automatically switches Schema AND Saved Notes!
-    async function onProjectSwitch(newTable) {
+    // Switch Active Data Table (for Schema inspection and target column selection)
+    // Decoupled from Notes & Custom Folders: Does NOT clear user's folders or notes!
+    async function onProjectSwitch(newTable, autoSelectFirst = false) {
       currentTable = newTable;
-      customFolders = [];
-      collapsedFolders.clear();
       draggedNoteId = null;
       renderSchemaSidebar();
+
       if (!currentTable) {
-        savedNotes = [];
-        renderNotesList();
-        setEditorLanguage("sql");
-        cmEditor.setValue(`-- 📁 專案資料夾「datasets/${currentFolder}/」目前尚未匯入任何資料表\n-- 💡 請點選右上角「➕ 匯入數據 (單檔/多檔)」上傳 CSV 或 Excel 檔案\n-- 或將檔案放入 datasets/${currentFolder}/ 後點擊上方「🔄 掃描」即可自動建表並生成分析！`);
+        if (notesScope === "table") {
+          savedNotes = [];
+          renderNotesList();
+        }
         return;
       }
-      await loadSavedNotesForCurrentTable();
-      if (savedNotes.length > 0) {
-        selectNoteById(savedNotes[0].id);
+
+      // If notes are not yet loaded for this project, load them
+      if (savedNotes.length === 0) {
+        await loadSavedNotesForCurrentTable();
+        if (savedNotes.length > 0 && autoSelectFirst) {
+          selectNoteById(savedNotes[0].id);
+        }
+      } else if (notesScope === "table") {
+        // Only if user specifically turned on single-table filter mode
+        await loadSavedNotesForCurrentTable();
+        if (savedNotes.length > 0 && autoSelectFirst) {
+          selectNoteById(savedNotes[0].id);
+        }
       } else {
-        setEditorLanguage("sql");
-        cmEditor.setValue(`SELECT * FROM "${currentTable}" LIMIT 25;`);
-        runCurrentCode();
+        // Default "folder" (專案常駐) mode:
+        // All custom folders and all notes remain permanently displayed!
+        showStatus(`📄 目前參考資料表已切換為「${currentTable}」，可於左側查看欄位結構與中英對照`, false);
       }
     }
 
@@ -1503,7 +1523,7 @@
       }
       currentTable = "defects";
       await loadTablesMeta();
-      await onProjectSwitch("defects");
+      await onFolderSwitch(currentFolder);
     }
 
     function setSchemaSidebarFilter(filterVal) {
@@ -1836,7 +1856,7 @@
       const clean = fName.trim();
       if (!customFolders.includes(clean)) {
         customFolders.push(clean);
-        const projectKey = `${currentFolder}::${currentTable}`;
+        const projectKey = currentFolder;
         try {
           localStorage.setItem("dataflow_custom_folders_" + projectKey, JSON.stringify(customFolders));
         } catch (e) {}
@@ -1855,7 +1875,7 @@
         }
       });
       customFolders = customFolders.filter((f) => f !== folderName);
-      const projectKey = `${currentFolder}::${currentTable}`;
+      const projectKey = currentFolder;
       try {
         localStorage.setItem("dataflow_custom_folders_" + projectKey, JSON.stringify(customFolders));
       } catch (e) {}
@@ -1984,8 +2004,8 @@
         savedNotes = (data.notes || []).map(n => ({ ...n, _fromTable: currentTable }));
       }
 
-      // 嚴格依專案資料表完全隔離自訂資料夾
-      const projectKey = `${currentFolder}::${currentTable}`;
+      // 依專案資料夾保存自訂分類資料夾（解耦單一資料表，永久常駐）
+      const projectKey = currentFolder;
       try {
         const stored = JSON.parse(localStorage.getItem("dataflow_custom_folders_" + projectKey) || "[]");
         customFolders = Array.isArray(stored) ? stored : [];
@@ -2151,6 +2171,10 @@
                 ? `<span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-emerald-600 text-white">🐍 Py</span>`
                 : `<span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-indigo-600 text-white">💻 SQL</span>`;
 
+              const tableBadge = item._fromTable
+                ? `<span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200" title="此程式所屬資料表">${escapeHtml(item._fromTable)}</span>`
+                : "";
+
               let tagColor = "bg-slate-100 text-slate-700";
               if (item.step_tag && item.step_tag.includes("Step 1")) tagColor = "bg-emerald-100 text-emerald-800";
               else if (item.step_tag && item.step_tag.includes("Step 2")) tagColor = "bg-amber-100 text-amber-800";
@@ -2167,7 +2191,8 @@
                   <div class="flex items-center space-x-1 truncate flex-1">
                     <span class="text-slate-400 font-mono text-[10px] cursor-grab" title="按住拖曳移動">⠿</span>
                     ${langBadge}
-                    <span class="text-[9px] font-bold px-1.5 py-0.2 rounded ${tagColor} truncate max-w-[130px]">${escapeHtml(item.step_tag || "筆記")}</span>
+                    ${tableBadge}
+                    <span class="text-[9px] font-bold px-1.5 py-0.2 rounded ${tagColor} truncate max-w-[110px]">${escapeHtml(item.step_tag || "筆記")}</span>
                   </div>
                   <div class="flex items-center space-x-1 shrink-0 ml-1">
                     <select class="text-[9px] bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 rounded px-1 py-0.5 focus:outline-none" title="快速移至其他資料夾">
@@ -2228,6 +2253,7 @@
         title: isPy ? `[${currentTable}] 新 Python 探索筆記` : `[${currentTable}] 新 SQL 探索筆記`,
         step_tag: folderName.includes("Step") ? folderName : "自訂探索筆記",
         folder: folderName,
+        _fromTable: currentTable,
         sql: isPy
           ? `# 檢查 ${currentTable} 資料概況\nprint(df.isnull().sum())\ndf.describe().T.round(2)`
           : `SELECT * FROM "${currentTable}" LIMIT 20;`,
@@ -2257,6 +2283,8 @@
         y2_col: document.getElementById("chartY2Select").value
       };
 
+      const existing = savedNotes.find((n) => n.id === currentNoteId);
+      const noteTable = existing && existing._fromTable ? existing._fromTable : currentTable;
       const noteObj = {
         id: asNew || !currentNoteId ? "note_" + Date.now() : currentNoteId,
         lang: currentEditorLang,
@@ -2265,7 +2293,8 @@
         folder,
         sql,
         note,
-        chart_config
+        chart_config,
+        _fromTable: noteTable
       };
 
       if (asNew || !currentNoteId) {
@@ -2999,7 +3028,7 @@
       }
       currentTable = data.table_name;
       await loadTablesMeta();
-      await onProjectSwitch(currentTable);
+      await onFolderSwitch(currentFolder);
       closeUploadModal();
       showStatus(data.message, false);
     }
@@ -3161,7 +3190,7 @@
 
       currentTable = data.table_name;
       await loadTablesMeta();
-      await onProjectSwitch(currentTable);
+      await onFolderSwitch(currentFolder);
       closeJoinModal();
       showStatus(data.message, false);
     }
@@ -3194,7 +3223,7 @@
 
       currentTable = data.table_name;
       await loadTablesMeta();
-      await onProjectSwitch(currentTable);
+      await onFolderSwitch(currentFolder);
       closeJoinModal();
       showStatus(data.message, false);
     }
